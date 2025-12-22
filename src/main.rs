@@ -101,6 +101,7 @@ impl From<EffortByDateData> for EffortByDateDto {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortByDevDto {
+    pub visible: bool,
     pub dev: Devs,
     pub effort: i32,
     pub remains: i32,
@@ -110,6 +111,7 @@ struct EffortByDevDto {
 impl From<EffortByDevDto> for EffortByDevData {
     fn from(d: EffortByDevDto) -> Self {
         EffortByDevData {
+            visible: d.visible,
             dev: d.dev as i32,
             effort: d.effort,
             remains: d.remains,
@@ -126,6 +128,7 @@ impl From<EffortByDevDto> for EffortByDevData {
 impl From<EffortByDevData> for EffortByDevDto {
     fn from(d: EffortByDevData) -> Self {
         EffortByDevDto {
+            visible: d.visible,
             dev: d.dev.into(),
             effort: d.effort,
             remains: d.remains,
@@ -138,6 +141,7 @@ impl From<EffortByDevData> for EffortByDevDto {
 struct EffortByPrjDto {
     text: String,
     project: i32,
+    visible: bool,
     efforts: Vec<EffortByDevDto>,
 }
 
@@ -146,6 +150,7 @@ impl From<EffortByPrjDto> for EffortByPrjData {
         EffortByPrjData {
             text: SharedString::from(d.text),
             project: d.project,
+            visible: d.visible,
             efforts: ModelRc::new(slint::VecModel::from(
                 d.efforts
                     .into_iter()
@@ -159,6 +164,7 @@ impl From<EffortByPrjDto> for EffortByPrjData {
 impl From<&EffortByPrjData> for EffortByPrjDto {
     fn from(d: &EffortByPrjData) -> Self {
         EffortByPrjDto {
+            visible: d.visible,
             text: d.text.clone().into(),
             project: d.project,
             efforts: d.efforts.iter().map(EffortByDevDto::from).collect(),
@@ -212,6 +218,7 @@ impl EffortByDevDto {
     fn new(dev: Devs, project: i32) -> Self {
         let one_year = get_one_year(&dev, project);
         Self {
+            visible: true,
             dev: dev.clone(),
             effort: 0,
             remains: 0,
@@ -224,6 +231,7 @@ impl Default for EffortByPrjDto {
     fn default() -> Self {
         let project = 0;
         EffortByPrjDto {
+            visible: true,
             text: "New Project".to_string(),
             project,
             efforts: vec![
@@ -316,6 +324,108 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     //     });
     // }
+
+    // {
+    //     let ui_weak = ui.as_weak();
+    //     let model = model.clone();
+    //     PjmCallback::get(&ui).on_search(move |text: SharedString| {
+    //         println!("on_search {:?}", text);
+    //         //let ui = ui_weak.unwrap();
+    //         for project_index in 0..model.row_count() {
+    //             let mut visible_prj = false;
+    //             let mut project = model
+    //                 .row_data(project_index)
+    //                 .unwrap_or(EffortByPrjData::default());
+    //             for effort_index in 0..project.efforts.row_count() {
+    //                 let mut visible_dev = false;
+    //                 let mut dev = project
+    //                     .efforts
+    //                     .row_data(effort_index)
+    //                     .unwrap_or(EffortByDevData::default());
+    //                 if text.is_empty() {
+    //                     visible_prj = true;
+    //                     visible_dev = true;
+    //                 } else {
+    //                     for data_index in 0..dev.datas.row_count() {
+    //                         let data = dev
+    //                             .datas
+    //                             .row_data(data_index)
+    //                             .unwrap_or(EffortByDateData::default());
+    //                         for person_index in 0..data.persons.row_count() {
+    //                             let person = data
+    //                                 .persons
+    //                                 .row_data(person_index)
+    //                                 .unwrap_or(SharedString::default());
+    //                             if person.contains(text.as_str()) {
+    //                                 visible_prj = true;
+    //                                 visible_dev = true;
+    //                                 break;
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //                 println!("Dev visibile {}", visible_dev);
+    //                 dev.visible = visible_dev;
+    //             }
+    //             println!("Project visibile {}", visible_prj);
+    //             project.visible = visible_prj;
+    //         }
+    //         ui_weak.upgrade().unwrap();
+    //     });
+    // }
+
+    {
+        //let ui_weak = ui.as_weak();
+        let model = model.clone();
+        PjmCallback::get(&ui).on_search(move |text: SharedString| {
+            println!("on_search {:?}", text);
+
+            for project_index in 0..model.row_count() {
+                let mut project = model.row_data(project_index).unwrap_or_default();
+                let mut visible_prj = false;
+
+                for effort_index in 0..project.efforts.row_count() {
+                    let mut dev = project.efforts.row_data(effort_index).unwrap_or_default();
+                    let mut visible_dev = false;
+
+                    if text.is_empty() {
+                        visible_prj = true;
+                        visible_dev = true;
+                    } else {
+                        for data_index in 0..dev.datas.row_count() {
+                            let data = dev.datas.row_data(data_index).unwrap_or_default();
+                            for person_index in 0..data.persons.row_count() {
+                                let person =
+                                    data.persons.row_data(person_index).unwrap_or_default();
+                                if person.to_string().contains(&text.to_string()) {
+                                    visible_prj = true;
+                                    visible_dev = true;
+                                    break;
+                                }
+                            }
+                            if visible_dev {
+                                break;
+                            }
+                        }
+
+                        // if (!visible_dev) {
+                        //     for data_index in 0..dev.datas.row_count() {
+                        //         let data = dev.datas.row_data(data_index).unwrap_or_default();
+                        //         data.visible = false;
+                        //         dev.datas.set_row_data(data_index, data);
+                        //     }
+                        // }
+                    }
+
+                    dev.visible = visible_dev;
+                    project.efforts.set_row_data(effort_index, dev); // ✅ NOTIFICA
+                }
+
+                project.visible = visible_prj;
+                model.set_row_data(project_index, project); // ✅ NOTIFICA principale
+            }
+        });
+    }
 
     ui.set_efforts(model.into());
 
