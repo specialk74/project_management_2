@@ -1,0 +1,15 @@
+[package]
+name = "project_app"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+slint = { version = "1.14.1", features = ["serde"] }
+smol = "2.0.2"
+
+[build-dependencies]
+slint-build = "1.14.1"

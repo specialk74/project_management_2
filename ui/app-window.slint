@@ -1,0 +1,200 @@
+import {
+    Button,
+    VerticalBox,
+    ListView,
+    CheckBox,
+    LineEdit,
+    Spinner,
+    TextEdit,
+} from "std-widgets.slint";
+
+component Cell-RO inherits Rectangle {
+    in property <string> text;
+
+    height: self.visible == false ? 0px : 20px;
+    width: 60px;
+    //background: Colors.red;
+    Text {
+        text: text;
+    }
+}
+
+export struct EffortByDateData {
+    total: int,
+    remains: int,
+    dev: int,
+    project: int,
+    effort: int,
+    date: int,
+    persons: [string],
+}
+
+export global PjmCallback {
+    callback changed_effort(EffortByDateData);
+    callback save_file();
+    in property <string> testo-copiato;
+}
+
+component Cell-RW inherits Rectangle {
+    in-out property <string> text;
+    callback double_clicked(string);
+    property <bool> editing: false;
+    height: 20px;
+    width: 60px;
+
+    fs := FocusScope {
+        focus-on-click: true;
+        focus-on-tab-navigation: true;
+        le := LineEdit {
+            visible: editing;
+            height: 100%;
+            width: 100%;
+            text <=> root.text;
+            accepted => {
+                root.double_clicked(root.text);
+                root.editing = false;
+                fs.focus();
+            }
+        }
+
+        Rectangle {
+            visible: !editing;
+            border-color: fs.has-focus ? Colors.yellow : Colors.transparent;
+            border-width: 1px;
+            TouchArea {
+                double-clicked => {
+                    root.editing = true;
+                    le.focus();
+                }
+                clicked => {
+                    fs.focus();
+                }
+            }
+
+            Cell-RO {
+                text: root.text;
+            }
+        }
+
+        key-pressed(event) => {
+            //debug(event.text);
+            if (event.modifiers.control) {
+                if (event.text == "C" || event.text == "c") {
+                    PjmCallback.testo-copiato = root.text;
+                }
+                if (event.text == "V" || event.text == "v") {
+                    root.text = PjmCallback.testo-copiato;
+                    root.double_clicked(root.text);
+                }
+                if (event.text == "S" || event.text == "s") {
+                    PjmCallback.save_file();
+                }
+            }
+            if (event.text == Key.Escape) {
+                root.editing = false;
+                le.clear-focus();
+                fs.focus();
+            }
+            if (event.text == Key.Return) {
+                root.editing = true;
+                le.focus();
+            }
+            if (event.text == Key.Tab) {
+                reject
+            } else {
+                accept
+            }
+        }
+    }
+}
+
+component EffortByDataGui {
+    in property <int> num_visible;
+    in property <EffortByDateData> effort;
+    VerticalLayout {
+        Cell-RO {
+            text: effort.total;
+        }
+
+        Cell-RO {
+            text: effort.remains;
+        }
+
+        for person[index] in effort.persons: Cell-RW {
+            //effort: root.effort;
+            //index: index;
+            text: person;
+            visible: index < root.num-visible;
+
+            double_clicked(text) => {
+                person = text;
+                PjmCallback.changed_effort(root.effort)
+            }
+        }
+    }
+}
+
+export struct EffortByDevData {
+    dev: int,
+    effort: int,
+    remains: int,
+    datas: [EffortByDateData],
+}
+
+component EffortByDevui {
+    in property <int> num_visible;
+    in property <EffortByDevData> datas;
+
+    HorizontalLayout {
+        for data[index] in datas.datas: EffortByDataGui {
+            num_visible: root.num_visible;
+            effort: data;
+        }
+    }
+}
+
+export struct EffortByPrjData {
+    project: int,
+    text: string,
+    efforts: [EffortByDevData]
+}
+
+
+
+component EffortByPrjGui {
+    in property <int> num_visible;
+    in property <EffortByPrjData> effort;
+    VerticalLayout {
+        for data[index] in effort.efforts: EffortByDevui {
+            num_visible: root.num_visible;
+            datas: data;
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    in-out property <[EffortByPrjData]> efforts;
+    in property <int> num_visible: 1;
+    in property <bool> loading: true;
+    min-width: 1024px;
+    min-height: 768px;
+
+    FocusScope {
+        HorizontalLayout {
+            for effort in efforts: EffortByPrjGui {
+                effort: effort;
+                num_visible: root.num_visible;
+            }
+        }
+
+        key-pressed(event) => {
+            if (event.modifiers.control) {
+                if (event.text == "S" || event.text == "s") {
+                    PjmCallback.save_file();
+                    return accept;
+                }
+            }
+            reject
+        }
+    }
+}
