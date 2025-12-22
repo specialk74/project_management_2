@@ -10,12 +10,19 @@ import {
     ProgressIndicator,
 } from "std-widgets.slint";
 
+import { Styles } from "styles.slint";
+
 component Cell-RO inherits Rectangle {
     in property <string> text;
 
-    height: self.visible ? 20px : 0px;
-    width: 60px;
+    height: self.visible ? Styles.height : 0px;
+    width: Styles.width;
+    clip: true;
     Text {
+        overflow: clip;
+        vertical-alignment: center;
+        horizontal-alignment: center;
+        wrap: word-wrap;
         text: text;
     }
 }
@@ -43,8 +50,8 @@ component Cell-RW inherits Rectangle {
     in-out property <string> text;
     callback double_clicked(string);
     property <bool> editing: false;
-    height: self.visible ? 20px : 0px;
-    width: 60px;
+    height: self.visible ? Styles.height : 0px;
+    width: Styles.width;
 
     fs := FocusScope {
         focus-on-click: true;
@@ -64,7 +71,7 @@ component Cell-RW inherits Rectangle {
         Rectangle {
             visible: !editing;
             border-color: fs.has-focus ? Colors.yellow : Colors.transparent;
-            border-width: 1px;
+            border-width: parent.visible ? 1px : 0px;
             TouchArea {
                 double-clicked => {
                     root.editing = true;
@@ -279,8 +286,13 @@ export component AppWindow inherits Window {
     in-out property <[EffortByPrjData]> efforts;
     in property <int> num_visible: 1;
     in property <bool> loading: true;
+
+    default-font-size: Styles.font-size;
+    default-font-family: Styles.font-family;
+    title: "Project Management Effort Tracker App";
     min-width: 1024px;
-    min-height: 768px;
+    //height: 768px;
+    resize-border-width: 10px;
 
     fs := FocusScope {
         HorizontalLayout {

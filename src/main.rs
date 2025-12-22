@@ -191,11 +191,11 @@ fn load_efforts_from_file(path: &str) -> Vec<EffortByPrjDto> {
     Vec::new()
 }
 
-async fn get_todos() -> i32 {
-    smol::Timer::after(std::time::Duration::from_secs(15)).await;
+// async fn get_todos() -> i32 {
+//     smol::Timer::after(std::time::Duration::from_secs(15)).await;
 
-    3
-}
+//     3
+// }
 
 fn get_one_year(dev: &Devs, project: i32) -> Vec<EffortByDateDto> {
     let mut ret = vec![];
