@@ -1,0 +1,86 @@
+import { AppState, EffortByPrjData } from "global.slint";
+
+export component Footer inherits Rectangle {
+    in property <length> width1;
+
+    in-out property <length> viewport_x;
+    in property <[EffortByPrjData]> efforts;
+
+    height: 20px * (max(AppState.model.length, AppState.worker_names.length) + 1);
+
+    HorizontalLayout {
+        Rectangle {
+            width: 60px * 2;
+            VerticalLayout {
+                Rectangle {
+                    height: 20px;
+                }
+
+                for data in AppState.model: Rectangle {
+                    height: 20px;
+                    HorizontalLayout {
+                        Rectangle {
+                            background: data.col;
+                            HorizontalLayout {
+
+                                Text {
+                                    width: 60px;
+                                    color: black;
+                                    text: data.title;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    width: 60px;
+                                    color: black;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    text: "1";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            width: 60px * 2;
+
+            VerticalLayout {
+                Rectangle {
+                    height: 20px;
+                }
+
+                for data in AppState.worker_names: Rectangle {
+                    height: 20px;
+                    Text {
+                        width: 60px * 2;
+                        color: black;
+                        text: data;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            height: 20px;
+            Flickable {
+                viewport-x <=> root.viewport_x;
+                HorizontalLayout {
+                    // for data in pjm_datas.current_dates: Rectangle {
+                    //     background: data == root.pjm_datas.current_week ? #ffff00 : Colors.green;
+                    //     width: 60px;
+                    //     Text {
+                    //         text: data;
+                    //         color: black;
+                    //     }
+                    // }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,31 @@
+import { AppState, EffortByPrjData } from "global.slint";
+
+
+export component Header inherits Rectangle {
+    in property <length> width1;
+
+    in-out property <length> viewport_x;
+    in property <[EffortByPrjData]> efforts;
+
+    height: 20px;
+
+    HorizontalLayout {
+        Rectangle {
+            width: 60px * 4;
+        }
+
+        Flickable {
+            viewport-x <=> root.viewport_x;
+            HorizontalLayout {
+                // for data in efforts.current_dates: Rectangle {
+                //     background: data == root.efforts.current_week ? #ffff00 : Colors.green;
+                //     width: 60px;
+                //     Text {
+                //         text: data;
+                //         color: black;
+                //     }
+                // }
+            }
+        }
+    }
+}

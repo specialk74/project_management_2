@@ -1,0 +1,55 @@
+import { LineEdit, HorizontalBox, TextEdit } from "std-widgets.slint";
+import { AppState, EffortByPrjData } from "global.slint";
+export component LeftColumn inherits Rectangle {
+    in property <length> width1;
+    in property <[EffortByPrjData]> efforts;
+
+    in-out property <length> viewport_y;
+    width: 60px * 4;
+
+    Flickable {
+        viewport-y <=> root.viewport_y;
+        VerticalLayout {
+            padding: 1px;
+            spacing: 1px;
+            // for item in root.pjm_datas.current_pjms: Rectangle {
+            //     background: gray;
+            //     HorizontalLayout {
+            //         TextEdit {
+            //             width: 60px * 2;
+            //             wrap: TextWrap.word-wrap;
+            //             horizontal-alignment: center;
+            //             text: item.info;
+            //             edited(text) => {
+            //                 item.info = text;
+            //             }
+            //         }
+
+            //         VerticalLayout {
+            //             for data in AppState.model: Rectangle {
+            //                 height: 20px;
+            //                 HorizontalLayout {
+            //                     Rectangle {
+            //                         background: data.col;
+            //                         Text {
+            //                             width: 60px;
+            //                             color: black;
+            //                             text: data.title;
+            //                             horizontal-alignment: center;
+            //                             vertical-alignment: center;
+            //                         }
+            //                     }
+
+            //                     LineEdit {
+            //                         width: 60px;
+            //                         horizontal-alignment: center;
+            //                         enabled: data.title != "PJM";
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+        }
+    }
+}

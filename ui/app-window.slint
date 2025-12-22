@@ -11,69 +11,44 @@ import {
 } from "std-widgets.slint";
 
 import { Styles } from "styles.slint";
+import {
+    EffortByPrjData,
+    EffortByDateData,
+    EffortByDevData,
+    Cell-RO,
+    Cell-RW,
+} from "global.slint";
 
-component InternalText inherits Text {
-    overflow: clip;
-    vertical-alignment: center;
-    horizontal-alignment: center;
-    wrap: word-wrap;
-}
+import { Header } from "header.slint";
+import { LeftColumn } from "left-column.slint";
+import { RightColumn } from "right-column.slint";
+import { Footer } from "footer.slint";
 
-component Cell-RO inherits Rectangle {
-    in property <string> text;
-    in property <color> text_color: #000000;
-    in property <int> font-weight: 400;
-    in property <color> error_color: #ffffff;
-    in property <color> background_color: #ffffff;
-    in property <TextHorizontalAlignment> horizontal-alignment: TextHorizontalAlignment.center;
+export global AppState {
+    in property <[{title: string, col: color}]> model: [
+        { title: "MCSW", col: Colors.red },
+        { title: "HW", col: Colors.green },
+        { title: "ELE", col: Colors.blue },
+        { title: "SMS", col: Colors.violet },
+        { title: "HW TEST", col: Colors.yellow },
+        { title: "SYS TEST", col: Colors.orange },
+        { title: "FW TEST", col: Colors.purple },
+        { title: "MVH", col: Colors.brown },
+        { title: "PJM", col: Colors.cyan },
+    ];
 
-    height: self.visible ? Styles.height : 0px;
-    width: Styles.width;
-    background: root.error_color;
-
-    clip: true;
-    Rectangle {
-        width: parent.width - 5px;
-        height: parent.visible ? parent.height - 5px : 0px;
-
-        innerRect := Rectangle {
-            property <length> parent_width: parent.width;
-            property <length> position: (parent.width - self.width) / 2;
-            property <length> start_position: (parent.width - self.width) / 2;
-            property <bool> running: self.width > parent.width;
-            x: position;
-            width: myText.width;
-            animate x {
-                duration: 1000ms;
-                easing: ease-in-out;
-            }
-            Timer {
-                interval: 5000ms;
-                running: running;
-
-                triggered => {
-                    position = position == 0 ? (parent_width - innerRect.width) : 0;
-                }
-            }
-
-            myText := InternalText {
-                color: root.text_color;
-                text: root.text;
-                font-weight: root.font-weight;
-                horizontal-alignment: root.horizontal-alignment;
-            }
-        }
-    }
-}
-
-export struct EffortByDateData {
-    total: int,
-    remains: int,
-    dev: int,
-    project: int,
-    effort: int,
-    date: int,
-    persons: [string],
+    in property <[string]> worker_names: [
+        "Alice",
+        "Bob",
+        "Charlie",
+        "David",
+        "Eve",
+        "Frank",
+        "Grace",
+        "Heidi",
+        "Ivan",
+        "Judy",
+    ];
 }
 
 export global PjmCallback {
@@ -83,180 +58,6 @@ export global PjmCallback {
     in property <string> testo-copiato;
     in property <string> last-search;
     in property <bool> show_modal;
-}
-
-component Cell-RW inherits Rectangle {
-    in-out property <string> text;
-    callback double_clicked(string);
-    property <bool> editing: false;
-    height: self.visible ? Styles.height : 0px;
-    width: Styles.width;
-
-    fs := FocusScope {
-        focus-on-click: true;
-        focus-on-tab-navigation: true;
-        le := LineEdit {
-            visible: editing;
-            height: 100%;
-            width: 100%;
-            text <=> root.text;
-            accepted => {
-                root.double_clicked(root.text);
-                root.editing = false;
-                fs.focus();
-            }
-        }
-
-        Rectangle {
-            visible: !editing;
-            border-color: fs.has-focus ? Colors.yellow : Colors.transparent;
-            border-width: parent.visible ? 1px : 0px;
-            TouchArea {
-                double-clicked => {
-                    root.editing = true;
-                    le.focus();
-                }
-                clicked => {
-                    fs.focus();
-                }
-            }
-
-            Cell-RO {
-                text: root.text;
-            }
-        }
-
-        key-pressed(event) => {
-            if (event.modifiers.control) {
-                if (event.text == "C" || event.text == "c") {
-                    PjmCallback.testo-copiato = root.text;
-                }
-                if (event.text == "V" || event.text == "v") {
-                    root.text = PjmCallback.testo-copiato;
-                    root.double_clicked(root.text);
-                }
-                if (event.text == "S" || event.text == "s") {
-                    PjmCallback.save_file();
-                }
-                if (event.text == "f") {
-                    PjmCallback.show_modal = true;
-                    //im.focus();
-                    //im.select-all();
-                    return accept;
-                }
-                if (event.text == "F") {
-                    PjmCallback.last-search = "";
-                    PjmCallback.search("");
-                    return accept;
-                }
-            }
-            if (event.text == Key.Escape) {
-                root.editing = false;
-                le.clear-focus();
-                fs.focus();
-            }
-            if (event.text == Key.Return) {
-                root.editing = true;
-                le.focus();
-            }
-            if (event.text == Key.Tab) {
-                reject
-            } else {
-                accept
-            }
-        }
-    }
-}
-
-component EffortByDataGui inherits Rectangle {
-    in property <int> num_visible;
-    in property <EffortByDateData> effort;
-    VerticalLayout {
-        spacing: 0px;
-        padding: 0px;
-
-        Cell-RO {
-            visible: root.visible;
-            text: effort.total;
-        }
-
-        Cell-RO {
-            visible: root.visible;
-            text: effort.remains;
-        }
-
-        for person[index] in effort.persons: Cell-RW {
-            //effort: root.effort;
-            //index: index;
-            text: person;
-            visible: root.visible;
-            //visible: index < root.num-visible;
-
-            double_clicked(text) => {
-                person = text;
-                PjmCallback.changed_effort(root.effort)
-            }
-        }
-    }
-}
-
-export struct EffortByDevData {
-    dev: int,
-    effort: int,
-    remains: int,
-    visible: bool,
-    datas: [EffortByDateData],
-}
-
-// component EffortByDevGui inherits Rectangle {
-//     in property <int> num_visible;
-//     in property <EffortByDevData> datas;
-//     visible: datas.visible;
-//     height: self.visible == false ? 0px : id.height;
-//     id := HorizontalLayout {
-//         for data[index] in datas.datas: EffortByDataGui {
-//             num_visible: root.num_visible;
-//             effort: data;
-//         }
-//     }
-// }
-
-component EffortByDevGui inherits Rectangle {
-    in property <int> num_visible;
-    in property <EffortByDevData> datas;
-    visible: datas.visible;
-    HorizontalBox {
-        spacing: 0px;
-        padding: 0px;
-
-        for data[index] in datas.datas: EffortByDataGui {
-            num_visible: root.num_visible;
-            effort: data;
-            visible: datas.visible;
-        }
-    }
-}
-
-export struct EffortByPrjData {
-    project: int,
-    text: string,
-    visible: bool,
-    efforts: [EffortByDevData]
-}
-
-component EffortByPrjGui inherits Rectangle {
-    in property <int> num_visible;
-    in property <EffortByPrjData> effort;
-    visible: effort.visible;
-    VerticalLayout {
-        spacing: 0px;
-        padding: 0px;
-
-        for data[index] in effort.efforts: EffortByDevGui {
-            num_visible: root.num_visible;
-            datas: data;
-        }
-    }
 }
 
 component ModalWindow inherits Window {
@@ -325,6 +126,9 @@ export component AppWindow inherits Window {
     in-out property <[EffortByPrjData]> efforts;
     in property <int> num_visible: 1;
     in property <bool> loading: true;
+    property <length> viewport-y;
+    property <length> viewport-x;
+    property <length> width1: 150px;
 
     default-font-size: Styles.font-size;
     default-font-family: Styles.font-family;
@@ -333,48 +137,74 @@ export component AppWindow inherits Window {
     //height: 768px;
     resize-border-width: 10px;
 
-    fs := FocusScope {
-        HorizontalLayout {
-            spacing: 0px;
-            padding: 0px;
-            for effort in efforts: EffortByPrjGui {
-                effort: effort;
-                num_visible: root.num_visible;
+    VerticalLayout {
+        fs := FocusScope {
+            Header {
+                width1: root.width1;
+
+                // binding tra componenti: Header.external_viewport_x <=> root.viewport-x
+                viewport_x <=> root.viewport-x;
+                efforts: root.efforts;
+            }
+
+            HorizontalLayout {
+                LeftColumn {
+                    width1: root.width1;
+                    efforts: root.efforts;
+
+                    // binding verticale
+                    viewport_y <=> root.viewport-y;
+                }
+
+                RightColumn {
+                    efforts: root.efforts;
+
+                    viewport_y <=> root.viewport-y;
+                    viewport_x <=> root.viewport-x;
+                }
+
+                spacing: 0px;
+                padding: 0px;
+            }
+
+            Footer {
+                width1: root.width1;
+                efforts: root.efforts;
+
+                viewport_x <=> root.viewport-x;
+            }
+
+            key-pressed(event) => {
+                if (event.modifiers.control) {
+                    if (event.text == "S" || event.text == "s") {
+                        PjmCallback.save_file();
+                        return accept;
+                    }
+                    if (event.text == "f") {
+                        PjmCallback.show_modal = true;
+                        im.select-all();
+                        im.focus();
+                        return accept;
+                    }
+                    if (event.text == "F") {
+                        PjmCallback.last-search = "";
+                        PjmCallback.search("");
+                        return accept;
+                    }
+                }
+                reject
             }
         }
 
-        key-pressed(event) => {
-            if (event.modifiers.control) {
-                if (event.text == "S" || event.text == "s") {
-                    PjmCallback.save_file();
-                    return accept;
-                }
-                if (event.text == "f") {
-                    PjmCallback.show_modal = true;
-                    im.select-all();
-                    im.focus();
-                    return accept;
-                }
-                if (event.text == "F") {
-                    PjmCallback.last-search = "";
-                    PjmCallback.search("");
-                    return accept;
-                }
+        im := ModalWindow {
+            visible: PjmCallback.show_modal;
+            title: "Search the worker...";
+            closed(result) => {
+                PjmCallback.last-search = result;
+                PjmCallback.search(result);
+                PjmCallback.show_modal = false;
+                fs.focus();
             }
-            reject
-        }
-    }
-
-    im := ModalWindow {
-        visible: PjmCallback.show_modal;
-        title: "Search the worker...";
-        x: 200px;
-        y: 200px;
-        closed(result) => {
-            PjmCallback.last-search = result;
-            PjmCallback.search(result);
-            PjmCallback.show_modal = false;
-            fs.focus();
         }
     }
 }
