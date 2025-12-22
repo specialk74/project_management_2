@@ -12,18 +12,57 @@ import {
 
 import { Styles } from "styles.slint";
 
+component InternalText inherits Text {
+    overflow: clip;
+    vertical-alignment: center;
+    horizontal-alignment: center;
+    wrap: word-wrap;
+}
+
 component Cell-RO inherits Rectangle {
     in property <string> text;
+    in property <color> text_color: #000000;
+    in property <int> font-weight: 400;
+    in property <color> error_color: #ffffff;
+    in property <color> background_color: #ffffff;
+    in property <TextHorizontalAlignment> horizontal-alignment: TextHorizontalAlignment.center;
 
     height: self.visible ? Styles.height : 0px;
     width: Styles.width;
+    background: root.error_color;
+
     clip: true;
-    Text {
-        overflow: clip;
-        vertical-alignment: center;
-        horizontal-alignment: center;
-        wrap: word-wrap;
-        text: text;
+    Rectangle {
+        width: parent.width - 5px;
+        height: parent.visible ? parent.height - 5px : 0px;
+
+        innerRect := Rectangle {
+            property <length> parent_width: parent.width;
+            property <length> position: (parent.width - self.width) / 2;
+            property <length> start_position: (parent.width - self.width) / 2;
+            property <bool> running: self.width > parent.width;
+            x: position;
+            width: myText.width;
+            animate x {
+                duration: 1000ms;
+                easing: ease-in-out;
+            }
+            Timer {
+                interval: 5000ms;
+                running: running;
+
+                triggered => {
+                    position = position == 0 ? (parent_width - innerRect.width) : 0;
+                }
+            }
+
+            myText := InternalText {
+                color: root.text_color;
+                text: root.text;
+                font-weight: root.font-weight;
+                horizontal-alignment: root.horizontal-alignment;
+            }
+        }
     }
 }
 
@@ -264,7 +303,7 @@ component ModalWindow inherits Window {
 
         key-pressed(event) => {
             if (event.text == Key.Escape) {
-                root.closed("");
+                root.closed(PjmCallback.last-search);
                 accept
             }
             if (event.text == Key.Return) {
@@ -312,8 +351,8 @@ export component AppWindow inherits Window {
                 }
                 if (event.text == "f") {
                     PjmCallback.show_modal = true;
-                    im.focus();
                     im.select-all();
+                    im.focus();
                     return accept;
                 }
                 if (event.text == "F") {
@@ -329,6 +368,8 @@ export component AppWindow inherits Window {
     im := ModalWindow {
         visible: PjmCallback.show_modal;
         title: "Search the worker...";
+        x: 200px;
+        y: 200px;
         closed(result) => {
             PjmCallback.last-search = result;
             PjmCallback.search(result);
