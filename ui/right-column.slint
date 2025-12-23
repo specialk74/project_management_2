@@ -1,4 +1,5 @@
 import { AppState, EffortByPrjData, EffortByPrjGui } from "global.slint";
+
 export component RightColumn inherits Rectangle {
     in property <string> prefix;
     in property <[EffortByPrjData]> efforts;
@@ -9,12 +10,12 @@ export component RightColumn inherits Rectangle {
         viewport-y <=> root.viewport_y;
         viewport-x <=> root.viewport_x;
         VerticalLayout {
-            padding: 1px;
-            spacing: 1px;
-            for effort in efforts: EffortByPrjGui {
+            padding: 0px;
+            spacing: 0px;
+            for effort in root.efforts: EffortByPrjGui {
                 effort: effort;
-                    //num_visible: root.num_visible;
-                }
+                //num_visible: root.num_visible;
+            }
         }
     }
 }

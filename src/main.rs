@@ -1,6 +1,7 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use chrono::{Datelike, Local};
 use serde::{Deserialize, Serialize};
 use slint::{Model, ModelRc, SharedString};
 use std::fs::File;
@@ -172,6 +173,25 @@ impl From<&EffortByPrjData> for EffortByPrjDto {
     }
 }
 
+fn dates(start_date: &chrono::DateTime<Local>) -> Vec<SharedString> {
+    let mut dates: Vec<SharedString> = Vec::new();
+    let mut start_date = primo_giorno_settimana_corrente(start_date);
+
+    let week_number = 52 - start_date.iso_week().week();
+    for _ in 0..52 + week_number {
+        let date_str = start_date.format("%y-%m-%d").to_string();
+        dates.push(date_str.clone().into());
+        start_date += chrono::Duration::days(7);
+        start_date = primo_giorno_settimana_corrente(&start_date);
+    }
+    dates
+}
+
+fn primo_giorno_settimana_corrente(data: &chrono::DateTime<Local>) -> chrono::DateTime<Local> {
+    let giorni_da_lunedi = data.weekday().num_days_from_monday();
+    *data - chrono::Duration::days(giorni_da_lunedi as i64)
+}
+
 fn save_efforts_to_file(efforts: &Vec<EffortByPrjDto>, path: &str) -> std::io::Result<()> {
     let json = serde_json::to_string_pretty(efforts).unwrap(); // oppure to_string
     let mut file = File::create(path)?;
@@ -255,6 +275,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     //let old_model = Rc::new(slint::VecModel::default());
     let model = Rc::new(slint::VecModel::default());
 
+    let start_date = Local::now() - chrono::Duration::days(30);
+    let weeks = std::rc::Rc::new(slint::VecModel::from(dates(&start_date)));
+
+    {
+        ui.as_weak()
+            .upgrade()
+            .unwrap()
+            .set_weeks(weeks.clone().into());
+    }
+
     // {
     //     let model = old_model.clone();
     //     let ui_weak = ui.as_weak();
@@ -322,55 +352,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
     //         let ui = ui_weak.unwrap();
 
-    //     });
-    // }
-
-    // {
-    //     let ui_weak = ui.as_weak();
-    //     let model = model.clone();
-    //     PjmCallback::get(&ui).on_search(move |text: SharedString| {
-    //         println!("on_search {:?}", text);
-    //         //let ui = ui_weak.unwrap();
-    //         for project_index in 0..model.row_count() {
-    //             let mut visible_prj = false;
-    //             let mut project = model
-    //                 .row_data(project_index)
-    //                 .unwrap_or(EffortByPrjData::default());
-    //             for effort_index in 0..project.efforts.row_count() {
-    //                 let mut visible_dev = false;
-    //                 let mut dev = project
-    //                     .efforts
-    //                     .row_data(effort_index)
-    //                     .unwrap_or(EffortByDevData::default());
-    //                 if text.is_empty() {
-    //                     visible_prj = true;
-    //                     visible_dev = true;
-    //                 } else {
-    //                     for data_index in 0..dev.datas.row_count() {
-    //                         let data = dev
-    //                             .datas
-    //                             .row_data(data_index)
-    //                             .unwrap_or(EffortByDateData::default());
-    //                         for person_index in 0..data.persons.row_count() {
-    //                             let person = data
-    //                                 .persons
-    //                                 .row_data(person_index)
-    //                                 .unwrap_or(SharedString::default());
-    //                             if person.contains(text.as_str()) {
-    //                                 visible_prj = true;
-    //                                 visible_dev = true;
-    //                                 break;
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //                 println!("Dev visibile {}", visible_dev);
-    //                 dev.visible = visible_dev;
-    //             }
-    //             println!("Project visibile {}", visible_prj);
-    //             project.visible = visible_prj;
-    //         }
-    //         ui_weak.upgrade().unwrap();
     //     });
     // }
 

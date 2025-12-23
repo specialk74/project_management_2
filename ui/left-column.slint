@@ -1,7 +1,7 @@
 import { LineEdit, HorizontalBox, TextEdit } from "std-widgets.slint";
 import { AppState, EffortByPrjData } from "global.slint";
+import { Styles } from "styles.slint";
 export component LeftColumn inherits Rectangle {
-    in property <length> width1;
     in property <[EffortByPrjData]> efforts;
 
     in-out property <length> viewport_y;
@@ -10,46 +10,59 @@ export component LeftColumn inherits Rectangle {
     Flickable {
         viewport-y <=> root.viewport_y;
         VerticalLayout {
-            padding: 1px;
-            spacing: 1px;
-            // for item in root.pjm_datas.current_pjms: Rectangle {
-            //     background: gray;
-            //     HorizontalLayout {
-            //         TextEdit {
-            //             width: 60px * 2;
-            //             wrap: TextWrap.word-wrap;
-            //             horizontal-alignment: center;
-            //             text: item.info;
-            //             edited(text) => {
-            //                 item.info = text;
-            //             }
-            //         }
+            padding: 0px;
+            spacing: 0px;
+            for item in root.efforts: Rectangle {
+                background: gray;
+                HorizontalLayout {
+                    TextEdit {
+                        width: 60px * 2;
+                        wrap: TextWrap.word-wrap;
+                        horizontal-alignment: center;
+                        text: item.text;
+                        edited(text) => {
+                            item.text = text;
+                        }
+                    }
 
-            //         VerticalLayout {
-            //             for data in AppState.model: Rectangle {
-            //                 height: 20px;
-            //                 HorizontalLayout {
-            //                     Rectangle {
-            //                         background: data.col;
-            //                         Text {
-            //                             width: 60px;
-            //                             color: black;
-            //                             text: data.title;
-            //                             horizontal-alignment: center;
-            //                             vertical-alignment: center;
-            //                         }
-            //                     }
+                    VerticalLayout {
+                        for data in AppState.model: Rectangle {
+                            height: Styles.height * 2;
+                            HorizontalLayout {
+                                Rectangle {
+                                    background: data.col;
+                                    width: Styles.width - 50px;
+                                    clip: true;
+                                    Text {
+                                        width: Styles.width - 50px;
+                                        font-weight: 800;
+                                        color: data.text-color;
+                                        text: data.title;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        wrap: word-wrap;
+                                    }
+                                }
 
-            //                     LineEdit {
-            //                         width: 60px;
-            //                         horizontal-alignment: center;
-            //                         enabled: data.title != "PJM";
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
+                                VerticalLayout {
+                                    LineEdit {
+                                        height: Styles.height;
+                                        width: Styles.width;
+                                        horizontal-alignment: center;
+                                    }
+
+                                    Text {
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        height: Styles.height;
+                                        text: "rem";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

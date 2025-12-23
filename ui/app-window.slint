@@ -22,7 +22,8 @@ import {
 import { Header } from "header.slint";
 import { LeftColumn } from "left-column.slint";
 import { RightColumn } from "right-column.slint";
-import { Footer } from "footer.slint";
+import { LeftFooter } from "left-footer.slint";
+import { RightFooter } from "right-footer.slint";
 
 export global AppState {
     in property <[{title: string, col: color}]> model: [
@@ -55,6 +56,7 @@ export global PjmCallback {
     callback changed_effort(EffortByDateData);
     callback save_file();
     callback search(string);
+
     in property <string> testo-copiato;
     in property <string> last-search;
     in property <bool> show_modal;
@@ -129,6 +131,7 @@ export component AppWindow inherits Window {
     property <length> viewport-y;
     property <length> viewport-x;
     property <length> width1: 150px;
+    in property <[string]> weeks;
 
     default-font-size: Styles.font-size;
     default-font-family: Styles.font-family;
@@ -136,75 +139,97 @@ export component AppWindow inherits Window {
     min-width: 1024px;
     //height: 768px;
     resize-border-width: 10px;
+    //full-screen: true;
 
     VerticalLayout {
-        fs := FocusScope {
-            Header {
-                width1: root.width1;
-
-                // binding tra componenti: Header.external_viewport_x <=> root.viewport-x
-                viewport_x <=> root.viewport-x;
-                efforts: root.efforts;
-            }
-
-            HorizontalLayout {
-                LeftColumn {
-                    width1: root.width1;
-                    efforts: root.efforts;
-
-                    // binding verticale
-                    viewport_y <=> root.viewport-y;
-                }
-
-                RightColumn {
-                    efforts: root.efforts;
-
-                    viewport_y <=> root.viewport-y;
-                    viewport_x <=> root.viewport-x;
-                }
-
-                spacing: 0px;
-                padding: 0px;
-            }
-
-            Footer {
-                width1: root.width1;
-                efforts: root.efforts;
-
-                viewport_x <=> root.viewport-x;
-            }
-
-            key-pressed(event) => {
-                if (event.modifiers.control) {
-                    if (event.text == "S" || event.text == "s") {
-                        PjmCallback.save_file();
-                        return accept;
-                    }
-                    if (event.text == "f") {
-                        PjmCallback.show_modal = true;
-                        im.select-all();
-                        im.focus();
-                        return accept;
-                    }
-                    if (event.text == "F") {
-                        PjmCallback.last-search = "";
-                        PjmCallback.search("");
-                        return accept;
-                    }
-                }
-                reject
-            }
+        Header {
+            weeks: root.weeks;
+            viewport_x <=> root.viewport-x;
+            efforts: root.efforts;
         }
 
-        im := ModalWindow {
-            visible: PjmCallback.show_modal;
-            title: "Search the worker...";
-            closed(result) => {
-                PjmCallback.last-search = result;
-                PjmCallback.search(result);
-                PjmCallback.show_modal = false;
-                fs.focus();
+        Rectangle {
+            height: 2px;
+            background: Colors.yellow;
+        }
+
+        HorizontalLayout {
+            LeftColumn {
+                efforts: root.efforts;
+
+                // binding verticale
+                viewport_y <=> root.viewport-y;
             }
+
+            RightColumn {
+                efforts: root.efforts;
+
+                viewport_y <=> root.viewport-y;
+                viewport_x <=> root.viewport-x;
+            }
+
+            spacing: 0px;
+            padding: 0px;
+        }
+
+        Rectangle {
+            height: 2px;
+            background: Colors.yellow;
+        }
+
+        Header {
+            weeks: root.weeks;
+            viewport_x <=> root.viewport-x;
+            efforts: root.efforts;
+        }
+
+        HorizontalLayout {
+            LeftFooter {
+                weeks: root.weeks;
+                efforts: root.efforts;
+                viewport_x <=> root.viewport-x;
+            }
+
+            RightFooter {
+                efforts: root.efforts;
+                weeks: root.weeks;
+                viewport_y <=> root.viewport-y;
+                viewport_x <=> root.viewport-x;
+            }
+        }
+    }
+
+    fs := FocusScope {
+        key-pressed(event) => {
+            if (event.modifiers.control) {
+                if (event.text == "S" || event.text == "s") {
+                    PjmCallback.save_file();
+                    return accept;
+                }
+                if (event.text == "f") {
+                    PjmCallback.show_modal = true;
+                    im.select-all();
+                    im.focus();
+                    return accept;
+                }
+                if (event.text == "F") {
+                    PjmCallback.last-search = "";
+                    PjmCallback.search("");
+                    return accept;
+                }
+            }
+            reject
+        }
+    }
+
+    im := ModalWindow {
+        visible: PjmCallback.show_modal;
+        title: "Search the worker...";
+        closed(result) => {
+            PjmCallback.last-search = result;
+            PjmCallback.search(result);
+            PjmCallback.show_modal = false;
+            fs.focus();
         }
     }
 }

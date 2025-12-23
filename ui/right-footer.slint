@@ -1,0 +1,30 @@
+import { AppState, EffortByPrjData, EffortByPrjGui } from "global.slint";
+import { Styles } from "styles.slint";
+import { StyleMetrics, HorizontalBox } from "std-widgets.slint";
+
+export component RightFooter inherits Rectangle {
+    in property <[EffortByPrjData]> efforts;
+    in property <[string]> weeks;
+    in-out property <length> viewport_y;
+    in-out property <length> viewport_x;
+
+    Flickable {
+        viewport-y <=> root.viewport_y;
+        viewport-x <=> root.viewport_x;
+        HorizontalLayout {
+            padding: 0px;
+            spacing: 0px;
+            for giorno in root.weeks: Rectangle {
+                VerticalLayout {
+                    for data in AppState.worker_names: Rectangle {
+                        width: Styles.width;
+                        height: Styles.height;
+                        Text {
+                            text: 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

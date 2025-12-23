@@ -8,21 +8,22 @@ import {
     TextEdit,
     HorizontalBox,
     ProgressIndicator,
+    StyleMetrics,
 } from "std-widgets.slint";
 
 import { Styles } from "styles.slint";
 
 export global AppState {
-    in property <[{title: string, col: color}]> model: [
-        { title: "MCSW", col: Colors.red },
-        { title: "HW", col: Colors.green },
-        { title: "ELE", col: Colors.blue },
-        { title: "SMS", col: Colors.violet },
-        { title: "HW TEST", col: Colors.yellow },
-        { title: "SYS TEST", col: Colors.orange },
-        { title: "FW TEST", col: Colors.purple },
-        { title: "MVH", col: Colors.brown },
-        { title: "PJM", col: Colors.cyan },
+    in property <[{title: string, col: color, text-color: color}]> model: [
+        { title: "Mcsw", col: Colors.red, text-color: Colors.white },
+        { title: "Sms", col: Colors.violet, text-color: Colors.black },
+        { title: "Mvh", col: Colors.brown, text-color: Colors.black },
+        { title: "Hw", col: Colors.green, text-color: Colors.black },
+        { title: "Ele", col: Colors.blue, text-color: Colors.white },
+        { title: "Hw Test", col: Colors.yellow, text-color: Colors.black },
+        { title: "Fw Test", col: Colors.purple, text-color: Colors.white },
+        { title: "Sys Test", col: Colors.orange, text-color: Colors.black },
+        { title: "Pjm", col: Colors.cyan, text-color: Colors.black },
     ];
 
     in property <[string]> worker_names: [
@@ -36,6 +37,7 @@ export global AppState {
         "Heidi",
         "Ivan",
         "Judy",
+        "Andrea"
     ];
 }
 
@@ -83,15 +85,15 @@ component InternalText inherits Text {
 
 export component Cell-RO inherits Rectangle {
     in property <string> text;
-    in property <color> text_color: #000000;
+    //in property <color> text_color: #000000;
     in property <int> font-weight: 400;
-    in property <color> error_color: #ffffff;
-    in property <color> background_color: #ffffff;
+    //in property <color> error_color: #ffffff;
+    //in property <color> background_color: #ffffff;
     in property <TextHorizontalAlignment> horizontal-alignment: TextHorizontalAlignment.center;
 
     height: self.visible ? Styles.height : 0px;
     width: Styles.width;
-    background: root.error_color;
+    //background: root.error_color;
 
     clip: true;
     Rectangle {
@@ -119,7 +121,7 @@ export component Cell-RO inherits Rectangle {
             }
 
             myText := InternalText {
-                color: root.text_color;
+                //color: root.text_color;
                 text: root.text;
                 font-weight: root.font-weight;
                 horizontal-alignment: root.horizontal-alignment;
@@ -214,6 +216,20 @@ export component Cell-RW inherits Rectangle {
 export component EffortByDataGui inherits Rectangle {
     in property <int> num_visible;
     in property <EffortByDateData> effort;
+
+    popup := Rectangle {
+        x: t.mouse-x;
+        y: t.mouse-y - Styles.height * 2;
+        visible: t.has-hover;
+        height: Styles.height;
+        width: Styles.width;
+        background: yellow;
+        Text {
+            text: effort.remains;
+            color: Colors.black;
+        }
+    }
+
     VerticalLayout {
         spacing: 0px;
         padding: 0px;
@@ -221,12 +237,17 @@ export component EffortByDataGui inherits Rectangle {
         Cell-RO {
             visible: root.visible;
             text: effort.total;
+
+            t := TouchArea {
+                width: parent.width;
+                height: parent.height;
+            }
         }
 
-        Cell-RO {
-            visible: root.visible;
-            text: effort.remains;
-        }
+        // Cell-RO {
+        //     visible: root.visible;
+        //     text: effort.remains;
+        // }
 
         for person[index] in effort.persons: Cell-RW {
             //effort: root.effort;
