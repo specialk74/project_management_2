@@ -1,66 +1,106 @@
 import { LineEdit, HorizontalBox, TextEdit } from "std-widgets.slint";
 import { AppState, EffortByPrjData } from "global.slint";
 import { Styles } from "styles.slint";
+
+component Separatore inherits Rectangle {
+    in property <color> bgcolor;
+
+    height: self.visible == false ? 0px : 1px;
+    background: bgcolor;
+}
+
 export component LeftColumn inherits Rectangle {
     in property <[EffortByPrjData]> efforts;
-
     in-out property <length> viewport_y;
     width: 60px * 4;
 
     Flickable {
         viewport-y <=> root.viewport_y;
-        VerticalLayout {
-            padding: 0px;
-            spacing: 0px;
-            for item in root.efforts: Rectangle {
-                background: gray;
-                HorizontalLayout {
-                    TextEdit {
-                        width: 60px * 2;
-                        wrap: TextWrap.word-wrap;
-                        horizontal-alignment: center;
-                        text: item.text;
-                        edited(text) => {
-                            item.text = text;
+        for item in root.efforts: Rectangle {
+            VerticalLayout {
+                Rectangle {
+                    HorizontalLayout {
+                        TextEdit {
+                            width: 60px * 2;
+                            wrap: TextWrap.word-wrap;
+                            horizontal-alignment: center;
+                            text: item.text;
+                            edited(text) => {
+                                item.text = text;
+                            }
                         }
-                    }
 
-                    VerticalLayout {
-                        for data in AppState.model: Rectangle {
-                            height: Styles.height * 2;
-                            HorizontalLayout {
-                                Rectangle {
-                                    background: data.col;
-                                    width: Styles.width - 50px;
-                                    clip: true;
-                                    Text {
-                                        width: Styles.width - 50px;
-                                        font-weight: 800;
-                                        color: data.text-color;
-                                        text: data.title;
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
-                                        wrap: word-wrap;
-                                    }
-                                }
-
+                        VerticalLayout {
+                            for data[index] in item.efforts: Rectangle {
                                 VerticalLayout {
-                                    LineEdit {
-                                        height: Styles.height;
-                                        width: Styles.width;
-                                        horizontal-alignment: center;
+                                    Separatore {
+                                        visible: data.visible;
+                                        bgcolor: AppState.model[index].col;
+                                        height: data.visible == false ? 0px : 5px;
                                     }
 
-                                    Text {
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
-                                        height: Styles.height;
-                                        text: "rem";
+                                    Rectangle {
+                                        height: data.visible == false ? 0px : Styles.height * 2;
+
+                                        HorizontalLayout {
+                                            Rectangle {
+                                                background: AppState.model[index].col;
+                                                width: Styles.width - 50px;
+                                                clip: true;
+                                                height: data.visible == false ? 0px : Styles.height * 2;
+                                                Text {
+                                                    height: data.visible == false ? 0px : Styles.height * 2;
+                                                    width: Styles.width - 50px;
+                                                    font-weight: 800;
+                                                    color: AppState.model[index].text-color;
+                                                    text: AppState.model[index].title;
+                                                    horizontal-alignment: center;
+                                                    vertical-alignment: center;
+                                                    wrap: word-wrap;
+                                                }
+                                            }
+
+                                            Rectangle {
+                                                height: data.visible == false ? 0px : Styles.height * 2;
+
+                                                VerticalLayout {
+                                                    LineEdit {
+                                                        width: Styles.width;
+                                                        horizontal-alignment: center;
+                                                        text: data.effort;
+                                                        height: data.visible == false ? 0px : Styles.height;
+                                                    }
+
+                                                    Rectangle {
+                                                        background: data.remains == 0 ? Colors.red : Colors.transparent;
+                                                        height: data.visible == false ? 0px : Styles.height;
+
+                                                        Text {
+                                                            horizontal-alignment: center;
+                                                            vertical-alignment: center;
+                                                            text: data.remains;
+                                                            height: data.visible == false ? 0px : Styles.height;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Separatore {
+                                        height: data.visible == false ? 0px : 5px;
+                                        visible: data.visible;
+                                        bgcolor: AppState.model[index].col;
                                     }
                                 }
                             }
                         }
                     }
+                }
+
+                Rectangle {
+                    height: 5px;
+                    background: Colors.cyan;
                 }
             }
         }

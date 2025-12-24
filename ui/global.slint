@@ -17,13 +17,13 @@ export global AppState {
     in property <[{title: string, col: color, text-color: color}]> model: [
         { title: "Mcsw", col: Colors.red, text-color: Colors.white },
         { title: "Sms", col: Colors.violet, text-color: Colors.black },
-        { title: "Mvh", col: Colors.brown, text-color: Colors.black },
+        { title: "Mvh", col: Colors.brown, text-color: Colors.white },
         { title: "Hw", col: Colors.green, text-color: Colors.black },
         { title: "Ele", col: Colors.blue, text-color: Colors.white },
         { title: "Hw Test", col: Colors.yellow, text-color: Colors.black },
         { title: "Fw Test", col: Colors.purple, text-color: Colors.white },
         { title: "Sys Test", col: Colors.orange, text-color: Colors.black },
-        { title: "Pjm", col: Colors.cyan, text-color: Colors.black },
+        { title: "Pjm", col: Colors.cyan, text-color: Colors.black }
     ];
 
     in property <[string]> worker_names: [
@@ -71,6 +71,7 @@ export global PjmCallback {
     callback changed_effort(EffortByDateData);
     callback save_file();
     callback search(string);
+    callback new-project();
     in property <string> testo-copiato;
     in property <string> last-search;
     in property <bool> show_modal;
@@ -218,13 +219,16 @@ export component EffortByDataGui inherits Rectangle {
     in property <EffortByDateData> effort;
 
     popup := Rectangle {
-        x: t.mouse-x;
-        y: t.mouse-y - Styles.height * 2;
+        //x: t.mouse-x;
+        x: cell.x;
+        //y: t.mouse-y - Styles.height * 2;
+        y: cell.y + Styles.height;
         visible: t.has-hover;
         height: Styles.height;
         width: Styles.width;
         background: yellow;
         Text {
+            font-weight: 800;
             text: effort.remains;
             color: Colors.black;
         }
@@ -234,7 +238,7 @@ export component EffortByDataGui inherits Rectangle {
         spacing: 0px;
         padding: 0px;
 
-        Cell-RO {
+        cell := Cell-RO {
             visible: root.visible;
             text: effort.total;
 
@@ -267,15 +271,29 @@ export component EffortByDataGui inherits Rectangle {
 export component EffortByDevGui inherits Rectangle {
     in property <int> num_visible;
     in property <EffortByDevData> datas;
+    in property <int> index;
     visible: datas.visible;
-    HorizontalBox {
-        spacing: 0px;
-        padding: 0px;
+    VerticalLayout {
+        Rectangle {
+            height: datas.visible ? 5px : 0px;
+            background: AppState.model[root.index].col;
+        }
 
-        for data[index] in datas.datas: EffortByDataGui {
-            num_visible: root.num_visible;
-            effort: data;
-            visible: datas.visible;
+        HorizontalBox {
+            spacing: 0px;
+            padding: 0px;
+
+            for data[index] in datas.datas: EffortByDataGui {
+                num_visible: root.num_visible;
+                effort: data;
+                visible: datas.visible;
+            //padding: 1px;
+        }
+        }
+
+        Rectangle {
+            height: datas.visible ? 5px : 0px;
+            background: AppState.model[root.index].col;
         }
     }
 }
@@ -289,8 +307,13 @@ export component EffortByPrjGui inherits Rectangle {
         padding: 0px;
 
         for data[index] in effort.efforts: EffortByDevGui {
+            index: index;
             num_visible: root.num_visible;
             datas: data;
+        }
+        Rectangle {
+            height: 5px;
+            background: Colors.cyan;
         }
     }
 }

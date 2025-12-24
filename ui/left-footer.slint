@@ -48,8 +48,9 @@ export component LeftFooter inherits Rectangle {
         // I vari worker
         Rectangle {
             VerticalLayout {
-                for data in AppState.worker_names: Rectangle {
+                for data[index] in AppState.worker_names: Rectangle {
                     height: Styles.height;
+                    background: index.mod(2) == 0 ? Colors.gray : Colors.transparent;
                     Text {
                         width: Styles.width;
                         //color: black;

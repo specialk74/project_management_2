@@ -56,6 +56,7 @@ export global PjmCallback {
     callback changed_effort(EffortByDateData);
     callback save_file();
     callback search(string);
+    callback new-project();
 
     in property <string> testo-copiato;
     in property <string> last-search;
@@ -187,13 +188,11 @@ export component AppWindow inherits Window {
             LeftFooter {
                 weeks: root.weeks;
                 efforts: root.efforts;
-                viewport_x <=> root.viewport-x;
             }
 
             RightFooter {
                 efforts: root.efforts;
                 weeks: root.weeks;
-                viewport_y <=> root.viewport-y;
                 viewport_x <=> root.viewport-x;
             }
         }
@@ -215,6 +214,10 @@ export component AppWindow inherits Window {
                 if (event.text == "F") {
                     PjmCallback.last-search = "";
                     PjmCallback.search("");
+                    return accept;
+                }
+                if (event.text == "N" || event.text == "n") {
+                    PjmCallback.new-project();
                     return accept;
                 }
             }

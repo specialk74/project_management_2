@@ -302,7 +302,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     for dto in efforts {
-        model.push(dto.into()); // EffortByDate::from(dto)
+        model.push(dto.into());
     }
 
     // {
@@ -332,6 +332,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     .unwrap();
     // }
 
+    // Save Projects
     {
         let model = model.clone();
         PjmCallback::get(&ui).on_save_file(move || {
@@ -346,6 +347,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
     }
 
+    // New Project
+    {
+        let model = model.clone();
+        let ui_weak = ui.as_weak();
+
+        PjmCallback::get(&ui).on_new_project(move || {
+            println!("New Project added!");
+            model.push(EffortByPrjDto::default().into());
+            ui_weak.upgrade().unwrap();
+        });
+    }
+
     // {
     //     let ui_weak = ui.as_weak();
     //     let model = model.clone();
@@ -355,6 +368,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     });
     // }
 
+    // Search Worker
     {
         //let ui_weak = ui.as_weak();
         let model = model.clone();

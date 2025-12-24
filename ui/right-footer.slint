@@ -16,7 +16,8 @@ export component RightFooter inherits Rectangle {
             spacing: 0px;
             for giorno in root.weeks: Rectangle {
                 VerticalLayout {
-                    for data in AppState.worker_names: Rectangle {
+                    for data[index] in AppState.worker_names: Rectangle {
+                        background: index.mod(2) == 0 ? Colors.gray : Colors.transparent;
                         width: Styles.width;
                         height: Styles.height;
                         Text {
