@@ -56,6 +56,7 @@ export struct EffortByDevData {
     effort: int,
     remains: int,
     visible: bool,
+    max: int,
     datas: [EffortByDateData],
 }
 
@@ -66,12 +67,12 @@ export struct EffortByPrjData {
     efforts: [EffortByDevData]
 }
 
-
 export global PjmCallback {
     callback changed_effort(EffortByDateData);
     callback save_file();
     callback search(string);
-    callback new-project();
+    callback new_project();
+    callback add_row(int, int);
     in property <string> testo-copiato;
     in property <string> last-search;
     in property <bool> show_modal;

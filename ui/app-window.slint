@@ -17,7 +17,10 @@ import {
     EffortByDevData,
     Cell-RO,
     Cell-RW,
+    PjmCallback,
 } from "global.slint";
+
+export {PjmCallback}
 
 import { Header } from "header.slint";
 import { LeftColumn } from "left-column.slint";
@@ -25,47 +28,9 @@ import { RightColumn } from "right-column.slint";
 import { LeftFooter } from "left-footer.slint";
 import { RightFooter } from "right-footer.slint";
 
-export global AppState {
-    in property <[{title: string, col: color}]> model: [
-        { title: "MCSW", col: Colors.red },
-        { title: "HW", col: Colors.green },
-        { title: "ELE", col: Colors.blue },
-        { title: "SMS", col: Colors.violet },
-        { title: "HW TEST", col: Colors.yellow },
-        { title: "SYS TEST", col: Colors.orange },
-        { title: "FW TEST", col: Colors.purple },
-        { title: "MVH", col: Colors.brown },
-        { title: "PJM", col: Colors.cyan },
-    ];
-
-    in property <[string]> worker_names: [
-        "Alice",
-        "Bob",
-        "Charlie",
-        "David",
-        "Eve",
-        "Frank",
-        "Grace",
-        "Heidi",
-        "Ivan",
-        "Judy",
-    ];
-}
-
-export global PjmCallback {
-    callback changed_effort(EffortByDateData);
-    callback save_file();
-    callback search(string);
-    callback new-project();
-
-    in property <string> testo-copiato;
-    in property <string> last-search;
-    in property <bool> show_modal;
-}
-
 component ModalWindow inherits Window {
     callback closed(string);
-    callback select-all();
+    callback select_all();
 
     FocusScope {
         VerticalLayout {
@@ -121,7 +86,7 @@ component ModalWindow inherits Window {
     forward-focus: input_field;
 
     select-all => {
-        input_field.select-all();
+        input_field.select_all();
     }
 }
 
@@ -207,7 +172,7 @@ export component AppWindow inherits Window {
                 }
                 if (event.text == "f") {
                     PjmCallback.show_modal = true;
-                    im.select-all();
+                    im.select_all();
                     im.focus();
                     return accept;
                 }
@@ -217,7 +182,7 @@ export component AppWindow inherits Window {
                     return accept;
                 }
                 if (event.text == "N" || event.text == "n") {
-                    PjmCallback.new-project();
+                    PjmCallback.new_project();
                     return accept;
                 }
             }

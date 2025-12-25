@@ -3,7 +3,7 @@
 
 use chrono::{Datelike, Local};
 use serde::{Deserialize, Serialize};
-use slint::{Model, ModelRc, SharedString};
+use slint::{Model, ModelRc, SharedString, VecModel};
 use std::fs::File;
 use std::io::Write;
 use std::{error::Error, rc::Rc};
@@ -106,16 +106,24 @@ struct EffortByDevDto {
     pub dev: Devs,
     pub effort: i32,
     pub remains: i32,
+    pub max: i32,
     pub datas: Vec<EffortByDateDto>,
 }
 
 impl From<EffortByDevDto> for EffortByDevData {
     fn from(d: EffortByDevDto) -> Self {
+        let mut max = 0;
+        for data in d.datas.iter() {
+            if data.persons.len() > max {
+                max = data.persons.len();
+            }
+        }
         EffortByDevData {
             visible: d.visible,
             dev: d.dev as i32,
             effort: d.effort,
             remains: d.remains,
+            max: max as i32,
             datas: ModelRc::new(slint::VecModel::from(
                 d.datas
                     .into_iter()
@@ -128,11 +136,19 @@ impl From<EffortByDevDto> for EffortByDevData {
 
 impl From<EffortByDevData> for EffortByDevDto {
     fn from(d: EffortByDevData) -> Self {
+        let mut max = 0;
+        for data in d.datas.iter() {
+            if data.persons.row_count() > max {
+                max = data.persons.row_count();
+            }
+        }
+
         EffortByDevDto {
             visible: d.visible,
             dev: d.dev.into(),
             effort: d.effort,
             remains: d.remains,
+            max: d.datas.iter().count() as i32,
             datas: d.datas.iter().map(EffortByDateDto::from).collect(),
         }
     }
@@ -242,6 +258,7 @@ impl EffortByDevDto {
             dev: dev.clone(),
             effort: 0,
             remains: 0,
+            max: 1,
             datas: one_year,
         }
     }
@@ -370,7 +387,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Search Worker
     {
-        //let ui_weak = ui.as_weak();
         let model = model.clone();
         PjmCallback::get(&ui).on_search(move |text: SharedString| {
             println!("on_search {:?}", text);
@@ -418,6 +434,48 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 project.visible = visible_prj;
                 model.set_row_data(project_index, project); // ✅ NOTIFICA principale
+            }
+        });
+    }
+
+    // Add Row
+    {
+        let model = model.clone();
+        //let ui_weak = ui.as_weak();
+
+        PjmCallback::get(&ui).on_add_row(move |project_id: i32, dev_id: i32| {
+            println!("on_add_row - project: {} - dev: {}", project_id, dev_id);
+
+            for project_index in 0..model.row_count() {
+                let project = model.row_data(project_index).unwrap_or_default();
+                if project.project != project_id {
+                    continue;
+                }
+
+                for effort_index in 0..project.efforts.row_count() {
+                    let mut dev = project.efforts.row_data(effort_index).unwrap_or_default();
+                    if dev.dev != dev_id {
+                        continue;
+                    }
+
+                    let mut max = 0;
+                    for data_index in 0..dev.datas.row_count() {
+                        let data = dev.datas.row_data(data_index).unwrap_or_default();
+                        let persons_model: ModelRc<SharedString> = data.persons; /* dal tuo model */
+
+                        let vec_model = persons_model
+                            .as_any()
+                            .downcast_ref::<VecModel<SharedString>>() // ← downcast_ref (NON mut!)
+                            .expect("Deve essere VecModel");
+
+                        vec_model.push("".into());
+                        if max < vec_model.row_count() {
+                            max = vec_model.row_count();
+                        }
+                    }
+                    dev.max = max as i32;
+                    project.efforts.set_row_data(effort_index, dev);
+                }
             }
         });
     }

@@ -1,5 +1,5 @@
 import { LineEdit, HorizontalBox, TextEdit } from "std-widgets.slint";
-import { AppState, EffortByPrjData } from "global.slint";
+import { AppState, EffortByPrjData, PjmCallback } from "global.slint";
 import { Styles } from "styles.slint";
 
 component Separatore inherits Rectangle {
@@ -12,6 +12,7 @@ component Separatore inherits Rectangle {
 export component LeftColumn inherits Rectangle {
     in property <[EffortByPrjData]> efforts;
     in-out property <length> viewport_y;
+
     width: 60px * 4;
 
     Flickable {
@@ -40,16 +41,16 @@ export component LeftColumn inherits Rectangle {
                                     }
 
                                     Rectangle {
-                                        height: data.visible == false ? 0px : Styles.height * 2;
+                                        height: data.visible == false ? 0px : Styles.height * (data.max + 1);
 
                                         HorizontalLayout {
                                             Rectangle {
                                                 background: AppState.model[index].col;
                                                 width: Styles.width - 50px;
                                                 clip: true;
-                                                height: data.visible == false ? 0px : Styles.height * 2;
+                                                height: data.visible == false ? 0px : Styles.height * (data.max + 1);
                                                 Text {
-                                                    height: data.visible == false ? 0px : Styles.height * 2;
+                                                    height: data.visible == false ? 0px : Styles.height * (data.max + 1);
                                                     width: Styles.width - 50px;
                                                     font-weight: 800;
                                                     color: AppState.model[index].text-color;
@@ -57,11 +58,19 @@ export component LeftColumn inherits Rectangle {
                                                     horizontal-alignment: center;
                                                     vertical-alignment: center;
                                                     wrap: word-wrap;
+                                                    TouchArea {
+                                                        width: parent.width;
+                                                        height: parent.height;
+                                                        double-clicked => {
+                                                            debug("add_row");
+                                                            PjmCallback.add_row(item.project, data.dev);
+                                                        }
+                                                    }
                                                 }
                                             }
 
                                             Rectangle {
-                                                height: data.visible == false ? 0px : Styles.height * 2;
+                                                height: data.visible == false ? 0px : Styles.height * (data.max + 1);
 
                                                 VerticalLayout {
                                                     LineEdit {
@@ -81,6 +90,11 @@ export component LeftColumn inherits Rectangle {
                                                             text: data.remains;
                                                             height: data.visible == false ? 0px : Styles.height;
                                                         }
+                                                    }
+
+                                                    Rectangle {
+                                                        height: Styles.height * (data.max - 1);
+                                                        background: Colors.transparent;
                                                     }
                                                 }
                                             }
