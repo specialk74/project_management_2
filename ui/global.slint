@@ -52,7 +52,9 @@ export struct EffortByDateData {
 }
 
 export struct EffortByDevData {
+    project: int,
     dev: int,
+    total: int,
     effort: int,
     remains: int,
     visible: bool,
@@ -69,6 +71,7 @@ export struct EffortByPrjData {
 
 export global PjmCallback {
     callback changed_effort(EffortByDateData);
+    callback set_dev_effort(EffortByDevData);
     callback save_file();
     callback search(string);
     callback new_project();
@@ -220,9 +223,7 @@ export component EffortByDataGui inherits Rectangle {
     in property <EffortByDateData> effort;
 
     popup := Rectangle {
-        //x: t.mouse-x;
         x: cell.x;
-        //y: t.mouse-y - Styles.height * 2;
         y: cell.y + Styles.height;
         visible: t.has-hover;
         height: Styles.height;
@@ -249,17 +250,9 @@ export component EffortByDataGui inherits Rectangle {
             }
         }
 
-        // Cell-RO {
-        //     visible: root.visible;
-        //     text: effort.remains;
-        // }
-
-        for person[index] in effort.persons: Cell-RW {
-            //effort: root.effort;
-            //index: index;
+        for person in effort.persons: Cell-RW {
             text: person;
             visible: root.visible;
-            //visible: index < root.num-visible;
 
             double_clicked(text) => {
                 person = text;
@@ -284,12 +277,11 @@ export component EffortByDevGui inherits Rectangle {
             spacing: 0px;
             padding: 0px;
 
-            for data[index] in datas.datas: EffortByDataGui {
+            for data in datas.datas: EffortByDataGui {
                 num_visible: root.num_visible;
                 effort: data;
                 visible: datas.visible;
-            //padding: 1px;
-        }
+            }
         }
 
         Rectangle {

@@ -26,15 +26,15 @@ pub enum Devs {
 impl From<Devs> for i32 {
     fn from(value: Devs) -> Self {
         match value {
-            Devs::Ele => 4,
-            Devs::Hw => 3,
             Devs::Mcsw => 0,
-            Devs::Mvh => 2,
-            Devs::Pjm => 8,
             Devs::Sms => 1,
-            Devs::TestFw => 6,
+            Devs::Mvh => 2,
+            Devs::Hw => 3,
+            Devs::Ele => 4,
             Devs::TestHw => 5,
+            Devs::TestFw => 6,
             Devs::TestSys => 7,
+            Devs::Pjm => 8,
         }
     }
 }
@@ -42,15 +42,15 @@ impl From<Devs> for i32 {
 impl From<i32> for Devs {
     fn from(value: i32) -> Self {
         match value {
-            4 => Devs::Ele,
-            3 => Devs::Hw,
             0 => Devs::Mcsw,
-            2 => Devs::Mvh,
-            8 => Devs::Pjm,
             1 => Devs::Sms,
-            6 => Devs::TestFw,
+            2 => Devs::Mvh,
+            3 => Devs::Hw,
+            4 => Devs::Ele,
             5 => Devs::TestHw,
+            6 => Devs::TestFw,
             7 => Devs::TestSys,
+            8 => Devs::Pjm,
             _ => Devs::Mcsw,
         }
     }
@@ -65,6 +65,20 @@ pub struct EffortByDateDto {
     pub effort: i32,
     pub date: i32,
     pub persons: Vec<String>,
+}
+
+impl EffortByDateDto {
+    fn get_total(&self) -> i32 {
+        let mut total = 0;
+        for person in self.persons.iter() {
+            let mut split = person.split("|");
+            total += split
+                .nth(1)
+                .map_or(0, |f| f.parse::<i32>().map_or(0, |f| f * 40 / 100));
+        }
+
+        total
+    }
 }
 
 impl From<EffortByDateDto> for EffortByDateData {
@@ -102,6 +116,8 @@ impl From<EffortByDateData> for EffortByDateDto {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortByDevDto {
+    pub project: i32,
+    pub total: i32,
     pub visible: bool,
     pub dev: Devs,
     pub effort: i32,
@@ -119,6 +135,8 @@ impl From<EffortByDevDto> for EffortByDevData {
             }
         }
         EffortByDevData {
+            total: d.total,
+            project: d.project,
             visible: d.visible,
             dev: d.dev as i32,
             effort: d.effort,
@@ -144,6 +162,8 @@ impl From<EffortByDevData> for EffortByDevDto {
         }
 
         EffortByDevDto {
+            total: d.total,
+            project: d.project,
             visible: d.visible,
             dev: d.dev.into(),
             effort: d.effort,
@@ -254,6 +274,8 @@ impl EffortByDevDto {
     fn new(dev: Devs, project: i32) -> Self {
         let one_year = get_one_year(&dev, project);
         Self {
+            total: 0,
+            project,
             visible: true,
             dev: dev.clone(),
             effort: 0,
@@ -277,8 +299,8 @@ impl Default for EffortByPrjDto {
                 EffortByDevDto::new(Devs::Mvh, project),
                 EffortByDevDto::new(Devs::Hw, project),
                 EffortByDevDto::new(Devs::Ele, project),
-                EffortByDevDto::new(Devs::TestFw, project),
                 EffortByDevDto::new(Devs::TestHw, project),
+                EffortByDevDto::new(Devs::TestFw, project),
                 EffortByDevDto::new(Devs::TestSys, project),
                 EffortByDevDto::new(Devs::Pjm, project),
             ],
@@ -351,6 +373,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Save Projects
     {
+        let ui_weak = ui.as_weak();
         let model = model.clone();
         PjmCallback::get(&ui).on_save_file(move || {
             let mut efforts = Vec::new();
@@ -360,7 +383,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
 
             let _ = save_efforts_to_file(&efforts, "efforts.json");
-            println!("Saved!")
+            ui_weak.upgrade().unwrap().set_changed(false);
         });
     }
 
@@ -370,20 +393,122 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_weak = ui.as_weak();
 
         PjmCallback::get(&ui).on_new_project(move || {
-            println!("New Project added!");
-            model.push(EffortByPrjDto::default().into());
+            println!("New Project");
+            let prj = EffortByPrjDto {
+                project: model.row_count() as i32,
+                ..Default::default()
+            };
+            model.push(prj.into());
             ui_weak.upgrade().unwrap();
         });
     }
 
-    // {
-    //     let ui_weak = ui.as_weak();
-    //     let model = model.clone();
-    //     PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
-    //         let ui = ui_weak.unwrap();
+    // Set Dev Effort
+    {
+        let ui_weak = ui.as_weak();
+        let model = model.clone();
+        PjmCallback::get(&ui).on_set_dev_effort(move |effort: EffortByDevData| {
+            for project_index in 0..model.row_count() {
+                if project_index != effort.project as usize {
+                    continue;
+                }
 
-    //     });
-    // }
+                let project = model.row_data(project_index).unwrap_or_default();
+                for dev_index in 0..project.efforts.row_count() {
+                    if dev_index != effort.dev as usize {
+                        continue;
+                    }
+
+                    let mut dev = project.efforts.row_data(dev_index).unwrap_or_default();
+                    dev.remains = dev.effort - dev.total;
+
+                    for day_index in 0..dev.datas.row_count() {
+                        let mut day = dev.datas.row_data(day_index).unwrap_or_default();
+                        day.effort = dev.effort;
+                        day.remains = dev.remains;
+                        dev.datas.set_row_data(day_index, day);
+                    }
+                    project.efforts.set_row_data(dev_index, dev);
+                }
+            }
+            ui_weak.upgrade().unwrap().set_changed(true);
+        });
+    }
+
+    // Change effort
+    {
+        let ui_weak = ui.as_weak();
+        let model = model.clone();
+        PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
+            //println!("effort: {:?}", effort);
+            // for project_index in 0..model.row_count() {
+            //     let project = model.row_data(project_index).unwrap_or_default();
+            //     for dev_index in 0..project.efforts.row_count() {
+            //         let dev = project.efforts.row_data(dev_index).unwrap_or_default();
+            //         for day_index in 0..dev.datas.row_count() {
+            //             let day = dev.datas.row_data(day_index).unwrap_or_default();
+            //             for person_index in 0..day.persons.row_count() {
+            //                 println!(
+            //                     "project: {} - dev: {} - day: {} - person: {} \"{}\"",
+            //                     project_index,
+            //                     dev_index,
+            //                     day_index,
+            //                     person_index,
+            //                     day.persons.row_data(person_index).unwrap_or_default()
+            //                 );
+            //             }
+            //         }
+            //     }
+            // }
+
+            for project_index in 0..model.row_count() {
+                if project_index != effort.project as usize {
+                    continue;
+                }
+
+                let project = model.row_data(project_index).unwrap_or_default();
+                for dev_index in 0..project.efforts.row_count() {
+                    if dev_index != effort.dev as usize {
+                        continue;
+                    }
+
+                    let mut dev = project.efforts.row_data(dev_index).unwrap_or_default();
+
+                    let mut total = 0;
+                    for day_index in 0..dev.datas.row_count() {
+                        let mut day = dev.datas.row_data(day_index).unwrap_or_default();
+                        total += EffortByDateDto::from(day.clone()).get_total();
+                        //println!("total: {}", total);
+                        day.total = total;
+                        dev.datas.set_row_data(day_index, day);
+                    }
+                    dev.total = total;
+                    dev.remains = dev.effort - dev.total;
+
+                    for day_index in 0..dev.datas.row_count() {
+                        let mut day = dev.datas.row_data(day_index).unwrap_or_default();
+                        day.remains = dev.effort - day.total;
+                        dev.datas.set_row_data(day_index, day);
+                    }
+
+                    project.efforts.set_row_data(dev_index, dev);
+                }
+            }
+
+            // if let Some(project) = model.row_data(effort.project as usize) {
+            //     if let Some(dev) = project.efforts.row_data(effort.dev as usize) {
+            //         if let Some(mut day) = dev.datas.row_data(effort.date as usize) {
+            //             day.total = EffortByDateDto::from(day.clone()).get_total();
+            //             dev.datas.set_row_data(effort.date as usize, day);
+            //             //project.efforts.set_row_data(effort.dev as usize, dev);
+            //             //model.set_row_data(effort.project as usize, project);
+            //         }
+            //     }
+            // }
+
+            ui_weak.upgrade().unwrap().set_changed(true);
+        });
+    }
 
     // Search Worker
     {

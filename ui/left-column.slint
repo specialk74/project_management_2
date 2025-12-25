@@ -78,10 +78,15 @@ export component LeftColumn inherits Rectangle {
                                                         horizontal-alignment: center;
                                                         text: data.effort;
                                                         height: data.visible == false ? 0px : Styles.height;
+
+                                                        accepted(text) => {
+                                                            data.effort = text.to-float();
+                                                            PjmCallback.set_dev_effort(data);
+                                                        }
                                                     }
 
                                                     Rectangle {
-                                                        background: data.remains == 0 ? Colors.red : Colors.transparent;
+                                                        background: data.remains == data.effort ? Colors.red : Colors.transparent;
                                                         height: data.visible == false ? 0px : Styles.height;
 
                                                         Text {

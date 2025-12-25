@@ -98,10 +98,11 @@ export component AppWindow inherits Window {
     property <length> viewport-x;
     property <length> width1: 150px;
     in property <[string]> weeks;
+    in property <bool> changed;
 
     default-font-size: Styles.font-size;
     default-font-family: Styles.font-family;
-    title: "Project Management Effort Tracker App";
+    title: changed ? "Project Management Effort Tracker App (*)" : "Project Management Effort Tracker App";
     min-width: 1024px;
     //height: 768px;
     resize-border-width: 10px;
