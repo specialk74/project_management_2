@@ -17,109 +17,112 @@ export component LeftColumn inherits Rectangle {
 
     Flickable {
         viewport-y <=> root.viewport_y;
-        for item in root.efforts: Rectangle {
-            VerticalLayout {
-                Rectangle {
-                    HorizontalLayout {
-                        TextEdit {
-                            width: 60px * 2;
-                            wrap: TextWrap.word-wrap;
-                            horizontal-alignment: center;
-                            text: item.text;
-                            edited(text) => {
-                                item.text = text;
+        VerticalLayout {
+            for item in root.efforts: Rectangle {
+                VerticalLayout {
+                    Rectangle {
+                        HorizontalLayout {
+                            TextEdit {
+                                width: 60px * 2;
+                                wrap: TextWrap.word-wrap;
+                                horizontal-alignment: center;
+                                text: item.text;
+                                edited(text) => {
+                                    item.text = text;
+                                    PjmCallback.changed = true;
+                                }
                             }
-                        }
 
-                        VerticalLayout {
-                            for data[index] in item.efforts: Rectangle {
-                                VerticalLayout {
-                                    Separatore {
-                                        visible: data.visible;
-                                        bgcolor: AppState.model[index].col;
-                                        height: data.visible == false ? 0px : 5px;
-                                    }
+                            VerticalLayout {
+                                for data[index] in item.efforts: Rectangle {
+                                    VerticalLayout {
+                                        Separatore {
+                                            visible: data.visible;
+                                            bgcolor: AppState.model[index].col;
+                                            height: data.visible == false ? 0px : 5px;
+                                        }
 
-                                    Rectangle {
-                                        height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                        Rectangle {
+                                            height: data.visible == false ? 0px : Styles.height * (data.max + 1);
 
-                                        HorizontalLayout {
-                                            Rectangle {
-                                                background: AppState.model[index].col;
-                                                width: Styles.width - 50px;
-                                                clip: true;
-                                                height: data.visible == false ? 0px : Styles.height * (data.max + 1);
-                                                Text {
-                                                    height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                            HorizontalLayout {
+                                                Rectangle {
+                                                    background: AppState.model[index].col;
                                                     width: Styles.width - 50px;
-                                                    font-weight: 800;
-                                                    color: AppState.model[index].text-color;
-                                                    text: AppState.model[index].title;
-                                                    horizontal-alignment: center;
-                                                    vertical-alignment: center;
-                                                    wrap: word-wrap;
-                                                    TouchArea {
-                                                        width: parent.width;
-                                                        height: parent.height;
-                                                        double-clicked => {
-                                                            debug("add_row");
-                                                            PjmCallback.add_row(item.project, data.dev);
+                                                    clip: true;
+                                                    height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                                    Text {
+                                                        height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                                        width: Styles.width - 50px;
+                                                        font-weight: 800;
+                                                        color: AppState.model[index].text-color;
+                                                        text: AppState.model[index].title;
+                                                        horizontal-alignment: center;
+                                                        vertical-alignment: center;
+                                                        wrap: word-wrap;
+                                                        TouchArea {
+                                                            width: parent.width;
+                                                            height: parent.height;
+                                                            double-clicked => {
+                                                                debug("add_row");
+                                                                PjmCallback.add_row(item.project, data.dev);
+                                                            }
                                                         }
                                                     }
                                                 }
-                                            }
 
-                                            Rectangle {
-                                                height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                                Rectangle {
+                                                    height: data.visible == false ? 0px : Styles.height * (data.max + 1);
 
-                                                VerticalLayout {
-                                                    LineEdit {
-                                                        width: Styles.width;
-                                                        horizontal-alignment: center;
-                                                        text: data.effort;
-                                                        height: data.visible == false ? 0px : Styles.height;
-
-                                                        accepted(text) => {
-                                                            data.effort = text.to-float();
-                                                            PjmCallback.set_dev_effort(data);
-                                                        }
-                                                    }
-
-                                                    Rectangle {
-                                                        background: data.remains == data.effort ? Colors.red : Colors.transparent;
-                                                        height: data.visible == false ? 0px : Styles.height;
-
-                                                        Text {
+                                                    VerticalLayout {
+                                                        LineEdit {
+                                                            width: Styles.width;
                                                             horizontal-alignment: center;
-                                                            vertical-alignment: center;
-                                                            text: data.remains;
+                                                            text: data.effort;
                                                             height: data.visible == false ? 0px : Styles.height;
-                                                        }
-                                                    }
 
-                                                    Rectangle {
-                                                        height: Styles.height * (data.max - 1);
-                                                        background: Colors.transparent;
+                                                            accepted(text) => {
+                                                                data.effort = text.to-float();
+                                                                PjmCallback.set_dev_effort(data);
+                                                            }
+                                                        }
+
+                                                        Rectangle {
+                                                            background: data.remains == data.effort ? Colors.red : Colors.transparent;
+                                                            height: data.visible == false ? 0px : Styles.height;
+
+                                                            Text {
+                                                                horizontal-alignment: center;
+                                                                vertical-alignment: center;
+                                                                text: data.remains;
+                                                                height: data.visible == false ? 0px : Styles.height;
+                                                            }
+                                                        }
+
+                                                        Rectangle {
+                                                            height: Styles.height * (data.max - 1);
+                                                            background: Colors.transparent;
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
 
-                                    Separatore {
-                                        height: data.visible == false ? 0px : 5px;
-                                        visible: data.visible;
-                                        bgcolor: AppState.model[index].col;
+                                        Separatore {
+                                            height: data.visible == false ? 0px : 5px;
+                                            visible: data.visible;
+                                            bgcolor: AppState.model[index].col;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                Rectangle {
-                    height: 5px;
-                    background: Colors.cyan;
+                    Rectangle {
+                        height: 5px;
+                        background: Colors.cyan;
+                    }
                 }
             }
         }

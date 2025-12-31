@@ -1,7 +1,7 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use chrono::{Datelike, Local};
+use chrono::{DateTime, Datelike, Local, TimeZone};
 use serde::{Deserialize, Serialize};
 use slint::{Model, ModelRc, SharedString, VecModel};
 use std::fs::File;
@@ -177,6 +177,7 @@ impl From<EffortByDevData> for EffortByDevDto {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortByPrjDto {
     text: String,
+    start: i32,
     project: i32,
     visible: bool,
     efforts: Vec<EffortByDevDto>,
@@ -185,6 +186,7 @@ struct EffortByPrjDto {
 impl From<EffortByPrjDto> for EffortByPrjData {
     fn from(d: EffortByPrjDto) -> Self {
         EffortByPrjData {
+            start: d.start,
             text: SharedString::from(d.text),
             project: d.project,
             visible: d.visible,
@@ -201,6 +203,7 @@ impl From<EffortByPrjDto> for EffortByPrjData {
 impl From<&EffortByPrjData> for EffortByPrjDto {
     fn from(d: &EffortByPrjData) -> Self {
         EffortByPrjDto {
+            start: d.start,
             visible: d.visible,
             text: d.text.clone().into(),
             project: d.project,
@@ -211,9 +214,14 @@ impl From<&EffortByPrjData> for EffortByPrjDto {
 
 fn dates(start_date: &chrono::DateTime<Local>) -> Vec<SharedString> {
     let mut dates: Vec<SharedString> = Vec::new();
+
+    // Recupera il primo giorno della settimana della data passata
     let mut start_date = primo_giorno_settimana_corrente(start_date);
 
+    // Quale settimana dell'anno è?
     let week_number = 52 - start_date.iso_week().week();
+
+    // Dalla data di partenza per oltre 1 anno
     for _ in 0..52 + week_number {
         let date_str = start_date.format("%y-%m-%d").to_string();
         dates.push(date_str.clone().into());
@@ -284,15 +292,45 @@ impl EffortByDevDto {
             datas: one_year,
         }
     }
+
+    fn add_days(&mut self, days: i32) {
+        let data = self.datas.first().unwrap().clone();
+
+        for day in 0..days {
+            self.datas.insert(
+                0,
+                EffortByDateDto {
+                    total: 0,
+                    remains: 0,
+                    dev: data.dev.clone(),
+                    project: data.project,
+                    effort: data.effort,
+                    date: days - day,
+                    persons: vec!["".to_string()],
+                },
+            );
+        }
+    }
 }
 
-impl Default for EffortByPrjDto {
-    fn default() -> Self {
-        let project = 0;
+fn local_to_days(dt: &DateTime<Local>) -> i32 {
+    let epoch = Local.timestamp_opt(0, 0).unwrap();
+    let seconds = dt.timestamp() - epoch.timestamp();
+    (seconds / 86_400) as i32
+}
+
+fn days_to_local(days: i32) -> DateTime<Local> {
+    let seconds = (days as i64) * 86_400;
+    Local.timestamp_opt(seconds, 0).unwrap()
+}
+
+impl EffortByPrjDto {
+    fn new(project: i32) -> Self {
         EffortByPrjDto {
+            project,
+            start: local_to_days(&Local::now()),
             visible: true,
             text: "New Project".to_string(),
-            project,
             efforts: vec![
                 EffortByDevDto::new(Devs::Mcsw, project),
                 EffortByDevDto::new(Devs::Sms, project),
@@ -306,6 +344,18 @@ impl Default for EffortByPrjDto {
             ],
         }
     }
+
+    fn set_start_date(&mut self, start: i32) {
+        if self.start <= start {
+            return;
+        }
+
+        let diff = (self.start - start) / 7;
+        for dev in self.efforts.iter_mut() {
+            dev.add_days(diff);
+        }
+        self.start = start;
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -313,16 +363,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     //let old_model = Rc::new(slint::VecModel::default());
     let model = Rc::new(slint::VecModel::default());
-
-    let start_date = Local::now() - chrono::Duration::days(30);
-    let weeks = std::rc::Rc::new(slint::VecModel::from(dates(&start_date)));
-
-    {
-        ui.as_weak()
-            .upgrade()
-            .unwrap()
-            .set_weeks(weeks.clone().into());
-    }
 
     // {
     //     let model = old_model.clone();
@@ -337,11 +377,46 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut efforts = load_efforts_from_file("efforts.json");
     if efforts.is_empty() {
         println!("Creo un progetto di default");
-        efforts.push(EffortByPrjDto::default());
+        efforts.push(EffortByPrjDto::new(0));
+    }
+
+    //let mut start_date = local_to_days(&(Local::now() - chrono::Duration::days(30)));
+
+    let start_date = efforts
+        .iter()
+        .map(|d| d.start)
+        .min()
+        .unwrap_or(local_to_days(&(Local::now() - chrono::Duration::days(30))));
+
+    println!(
+        "start_date: {:?} -> {}",
+        start_date,
+        days_to_local(start_date)
+    );
+
+    for dto in efforts.iter() {
+        println!(
+            "Project {} start_date: {}",
+            dto.project,
+            days_to_local(dto.start)
+        );
+    }
+
+    for dto in efforts.iter_mut() {
+        dto.set_start_date(start_date);
     }
 
     for dto in efforts {
         model.push(dto.into());
+    }
+
+    let weeks = std::rc::Rc::new(slint::VecModel::from(dates(&days_to_local(start_date))));
+
+    {
+        ui.as_weak()
+            .upgrade()
+            .unwrap()
+            .set_weeks(weeks.clone().into());
     }
 
     // {
@@ -383,7 +458,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
 
             let _ = save_efforts_to_file(&efforts, "efforts.json");
-            ui_weak.upgrade().unwrap().set_changed(false);
+            if let Some(ui) = ui_weak.upgrade() {
+                PjmCallback::get(&ui).set_changed(false);
+            }
         });
     }
 
@@ -394,10 +471,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         PjmCallback::get(&ui).on_new_project(move || {
             println!("New Project");
-            let prj = EffortByPrjDto {
-                project: model.row_count() as i32,
-                ..Default::default()
-            };
+            let prj = EffortByPrjDto::new(model.row_count() as i32);
             model.push(prj.into());
             ui_weak.upgrade().unwrap();
         });
@@ -410,14 +484,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         PjmCallback::get(&ui).on_set_dev_effort(move |effort: EffortByDevData| {
             for project_index in 0..model.row_count() {
                 if project_index != effort.project as usize {
+                    println!("Skip project #{}", project_index);
                     continue;
                 }
+                println!("Manage project #{}", effort.project);
 
                 let project = model.row_data(project_index).unwrap_or_default();
                 for dev_index in 0..project.efforts.row_count() {
                     if dev_index != effort.dev as usize {
+                        println!("Skip dev #{}", dev_index);
                         continue;
                     }
+                    println!("Manage dev #{}", dev_index);
 
                     let mut dev = project.efforts.row_data(dev_index).unwrap_or_default();
                     dev.remains = dev.effort - dev.total;
@@ -431,7 +509,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     project.efforts.set_row_data(dev_index, dev);
                 }
             }
-            ui_weak.upgrade().unwrap().set_changed(true);
+            if let Some(ui) = ui_weak.upgrade() {
+                PjmCallback::get(&ui).set_changed(true);
+            }
         });
     }
 
@@ -440,37 +520,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_weak = ui.as_weak();
         let model = model.clone();
         PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
-            //println!("effort: {:?}", effort);
-            // for project_index in 0..model.row_count() {
-            //     let project = model.row_data(project_index).unwrap_or_default();
-            //     for dev_index in 0..project.efforts.row_count() {
-            //         let dev = project.efforts.row_data(dev_index).unwrap_or_default();
-            //         for day_index in 0..dev.datas.row_count() {
-            //             let day = dev.datas.row_data(day_index).unwrap_or_default();
-            //             for person_index in 0..day.persons.row_count() {
-            //                 println!(
-            //                     "project: {} - dev: {} - day: {} - person: {} \"{}\"",
-            //                     project_index,
-            //                     dev_index,
-            //                     day_index,
-            //                     person_index,
-            //                     day.persons.row_data(person_index).unwrap_or_default()
-            //                 );
-            //             }
-            //         }
-            //     }
-            // }
-
             for project_index in 0..model.row_count() {
                 if project_index != effort.project as usize {
+                    println!("Skip project #{}", project_index);
                     continue;
                 }
+                println!("Manage project #{}", effort.project);
 
                 let project = model.row_data(project_index).unwrap_or_default();
                 for dev_index in 0..project.efforts.row_count() {
                     if dev_index != effort.dev as usize {
+                        println!("Skip dev #{}", dev_index);
                         continue;
                     }
+                    println!("Manage dev #{}", dev_index);
 
                     let mut dev = project.efforts.row_data(dev_index).unwrap_or_default();
 
@@ -506,7 +569,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             //     }
             // }
 
-            ui_weak.upgrade().unwrap().set_changed(true);
+            if let Some(ui) = ui_weak.upgrade() {
+                PjmCallback::get(&ui).set_changed(true);
+            }
         });
     }
 

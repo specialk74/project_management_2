@@ -9,13 +9,14 @@ import {
     HorizontalBox,
     ProgressIndicator,
     StyleMetrics,
+    Palette,
 } from "std-widgets.slint";
 
 import { Styles } from "styles.slint";
 
 export global AppState {
     in property <[{title: string, col: color, text-color: color}]> model: [
-        { title: "Mcsw", col: Colors.red, text-color: Colors.white },
+        { title: "Mcsw", col: #0099ff, text-color: Colors.white },
         { title: "Sms", col: Colors.violet, text-color: Colors.black },
         { title: "Mvh", col: Colors.brown, text-color: Colors.white },
         { title: "Hw", col: Colors.green, text-color: Colors.black },
@@ -65,6 +66,7 @@ export struct EffortByDevData {
 export struct EffortByPrjData {
     project: int,
     text: string,
+    start: int,
     visible: bool,
     efforts: [EffortByDevData]
 }
@@ -79,6 +81,7 @@ export global PjmCallback {
     in property <string> testo-copiato;
     in property <string> last-search;
     in property <bool> show_modal;
+    in property <bool> changed;
 }
 
 component InternalText inherits Text {
@@ -90,8 +93,8 @@ component InternalText inherits Text {
 
 export component Cell-RO inherits Rectangle {
     in property <string> text;
-    //in property <color> text_color: #000000;
-    in property <int> font-weight: 400;
+    in property <color> text_color: Palette.color-scheme == ColorScheme.dark ? Colors.white : Colors.black;
+    in property <int> font-weight: 800;
     //in property <color> error_color: #ffffff;
     //in property <color> background_color: #ffffff;
     in property <TextHorizontalAlignment> horizontal-alignment: TextHorizontalAlignment.center;
@@ -126,7 +129,7 @@ export component Cell-RO inherits Rectangle {
             }
 
             myText := InternalText {
-                //color: root.text_color;
+                color: root.text_color;
                 text: root.text;
                 font-weight: root.font-weight;
                 horizontal-alignment: root.horizontal-alignment;
@@ -240,9 +243,44 @@ export component EffortByDataGui inherits Rectangle {
         spacing: 0px;
         padding: 0px;
 
+        function my-function(effort: EffortByDateData) -> color {
+            if effort.total == 0 {
+                return Palette.color-scheme == ColorScheme.dark ? Colors.white : Colors.black;
+            }
+            if effort.total < effort.effort * 10 / 100 {
+                return #6fff00;
+            }
+            if effort.total < effort.effort * 20 / 100 {
+                return #99ff00;
+            }
+            if effort.total < effort.effort * 30 / 100 {
+                return #ccff00;
+            }
+            if effort.total < effort.effort * 40 / 100 {
+                return #ffff00;
+            }
+            if effort.total < effort.effort * 50 / 100 {
+                return #ffcc00;
+            }
+            if effort.total < effort.effort * 60 / 100 {
+                return #ffaa00;
+            }
+            if effort.total < effort.effort * 70 / 100 {
+                return #ff8800;
+            }
+            if effort.total < effort.effort * 80 / 100 {
+                return #ff5500;
+            }
+            if effort.total < effort.effort * 90 / 100 {
+                return #ff3300;
+            }
+            return #ff0000;
+        }
+
         cell := Cell-RO {
             visible: root.visible;
             text: effort.total;
+            text_color: my-function(effort);
 
             t := TouchArea {
                 width: parent.width;
