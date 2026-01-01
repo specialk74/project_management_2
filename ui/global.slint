@@ -71,6 +71,11 @@ export struct EffortByPrjData {
     efforts: [EffortByDevData]
 }
 
+export struct EffortsData {
+    today: int,
+    projects: [EffortByPrjData]
+}
+
 export global PjmCallback {
     callback changed_effort(EffortByDateData);
     callback set_dev_effort(EffortByDevData);

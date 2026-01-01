@@ -18,6 +18,7 @@ import {
     Cell-RO,
     Cell-RW,
     PjmCallback,
+    EffortsData,
 } from "global.slint";
 
 export {PjmCallback}
@@ -91,7 +92,7 @@ component ModalWindow inherits Window {
 }
 
 export component AppWindow inherits Window {
-    in-out property <[EffortByPrjData]> efforts;
+    in-out property <EffortsData> efforts;
     in property <int> num_visible: 1;
     in property <bool> loading: true;
     property <length> viewport-y;

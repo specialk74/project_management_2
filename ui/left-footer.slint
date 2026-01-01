@@ -1,11 +1,11 @@
-import { AppState, EffortByPrjData } from "global.slint";
+import { AppState, EffortByPrjData, EffortsData } from "global.slint";
 import { Styles } from "styles.slint";
 
 export component LeftFooter inherits Rectangle {
     in property <[string]> weeks;
 
     in-out property <length> viewport_x;
-    in property <[EffortByPrjData]> efforts;
+    in property <EffortsData> efforts;
 
     height: Styles.height * (max(AppState.model.length, AppState.worker_names.length) + 1);
     width: 60px * 4;

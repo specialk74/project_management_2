@@ -10,7 +10,7 @@ use std::{error::Error, rc::Rc};
 
 slint::include_modules!();
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum Devs {
     Mcsw = 0,
     Sms = 1,
@@ -88,7 +88,7 @@ impl EffortByDateDto {
 
 impl From<EffortByDateDto> for EffortByDateData {
     fn from(d: EffortByDateDto) -> Self {
-        EffortByDateData {
+        Self {
             total: d.total,
             remains: d.remains,
             dev: d.dev.into(),
@@ -96,10 +96,7 @@ impl From<EffortByDateDto> for EffortByDateData {
             effort: d.effort,
             date: d.date,
             persons: ModelRc::new(slint::VecModel::from(
-                d.persons
-                    .into_iter()
-                    .map(SharedString::from)
-                    .collect::<Vec<_>>(),
+                d.persons.iter().map(SharedString::from).collect::<Vec<_>>(),
             )),
         }
     }
@@ -107,7 +104,7 @@ impl From<EffortByDateDto> for EffortByDateData {
 
 impl From<EffortByDateData> for EffortByDateDto {
     fn from(d: EffortByDateData) -> Self {
-        EffortByDateDto {
+        Self {
             total: d.total,
             remains: d.remains,
             dev: d.dev.into(),
@@ -139,7 +136,7 @@ impl From<EffortByDevDto> for EffortByDevData {
                 max = data.persons.len();
             }
         }
-        EffortByDevData {
+        Self {
             total: d.total,
             project: d.project,
             visible: d.visible,
@@ -166,7 +163,7 @@ impl From<EffortByDevData> for EffortByDevDto {
             }
         }
 
-        EffortByDevDto {
+        Self {
             total: d.total,
             project: d.project,
             visible: d.visible,
@@ -206,9 +203,9 @@ struct EffortByPrjDto {
 
 impl From<EffortByPrjDto> for EffortByPrjData {
     fn from(d: EffortByPrjDto) -> Self {
-        EffortByPrjData {
+        Self {
             start: d.start,
-            text: SharedString::from(d.text),
+            text: SharedString::from(d.text.clone()),
             project: d.project,
             visible: d.visible,
             efforts: ModelRc::new(slint::VecModel::from(
@@ -221,9 +218,9 @@ impl From<EffortByPrjDto> for EffortByPrjData {
     }
 }
 
-impl From<&EffortByPrjData> for EffortByPrjDto {
-    fn from(d: &EffortByPrjData) -> Self {
-        EffortByPrjDto {
+impl From<EffortByPrjData> for EffortByPrjDto {
+    fn from(d: EffortByPrjData) -> Self {
+        Self {
             start: d.start,
             visible: d.visible,
             text: d.text.clone().into(),
@@ -247,6 +244,54 @@ impl EffortByPrjData {
             self.efforts.set_row_data(dev_id.0, dev);
             return;
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct EffortsDto {
+    today: i32,
+    projects: Vec<EffortByPrjDto>,
+}
+
+impl Default for EffortsDto {
+    fn default() -> Self {
+        Self {
+            today: local_to_days(&Local::now()),
+            projects: vec![EffortByPrjDto::new(0)],
+        }
+    }
+}
+
+impl From<EffortsDto> for EffortsData {
+    fn from(d: EffortsDto) -> Self {
+        Self {
+            today: d.today,
+            projects: ModelRc::new(slint::VecModel::from(
+                d.projects
+                    .into_iter()
+                    .map(EffortByPrjData::from)
+                    .collect::<Vec<_>>(),
+            )),
+        }
+    }
+}
+
+impl From<EffortsData> for EffortsDto {
+    fn from(d: EffortsData) -> Self {
+        Self {
+            today: d.today,
+            projects: d.projects.iter().map(EffortByPrjDto::from).collect(),
+        }
+    }
+}
+
+impl EffortsDto {
+    fn start_date(&self) -> i32 {
+        self.projects
+            .iter()
+            .map(|d| d.start)
+            .min()
+            .unwrap_or(local_to_days(&(Local::now() - chrono::Duration::days(30))))
     }
 }
 
@@ -274,23 +319,35 @@ fn primo_giorno_settimana_corrente(data: &chrono::DateTime<Local>) -> chrono::Da
     *data - chrono::Duration::days(giorni_da_lunedi as i64)
 }
 
-fn save_efforts_to_file(efforts: &Vec<EffortByPrjDto>, path: &str) -> std::io::Result<()> {
+fn save_efforts_to_file(efforts: &EffortsDto, path: &str) -> std::io::Result<()> {
     let json = serde_json::to_string_pretty(efforts).unwrap(); // oppure to_string
     let mut file = File::create(path)?;
     file.write_all(json.as_bytes())?;
     Ok(())
 }
 
-fn load_efforts_from_file(path: &str) -> Vec<EffortByPrjDto> {
-    if let Ok(json_str) = std::fs::read_to_string(path) {
-        let efforts_dto: Result<Vec<EffortByPrjDto>, serde_json::Error> =
-            serde_json::from_str(&json_str);
+fn load_efforts_from_file(path: &str) -> EffortsDto {
+    let json_str = std::fs::read_to_string(path);
+    if let Ok(json_str) = json_str {
+        let efforts_dto: Result<EffortsDto, serde_json::Error> = serde_json::from_str(&json_str);
         if let Ok(efforts_dto) = efforts_dto {
             return efforts_dto;
+        } else {
+            println!(
+                "{}",
+                efforts_dto
+                    .expect_err(format!("Error during parse the file \"{}\"", path).as_str())
+            );
         }
+    } else {
+        println!(
+            "{}",
+            json_str.expect_err(format!("Error during load the file \"{}\"", path).as_str())
+        );
     }
+    println!("Create a default EffortsDto");
     // file non esiste, ritorna vuoto
-    Vec::new()
+    EffortsDto::default()
 }
 
 // async fn get_todos() -> i32 {
@@ -306,7 +363,7 @@ fn get_one_year(dev: &Devs, project: i32) -> Vec<EffortByDateDto> {
         ret.push(EffortByDateDto {
             date: index,
             effort: 0,
-            dev: dev.clone(),
+            dev: *dev,
             project,
             remains: 0,
             total: 0,
@@ -323,7 +380,7 @@ impl EffortByDevDto {
             total: 0,
             project,
             visible: true,
-            dev: dev.clone(),
+            dev,
             effort: 0,
             remains: 0,
             max: 1,
@@ -340,7 +397,7 @@ impl EffortByDevDto {
                 EffortByDateDto {
                     total: 0,
                     remains: 0,
-                    dev: data.dev.clone(),
+                    dev: data.dev,
                     project: data.project,
                     effort: data.effort,
                     date: days - day,
@@ -396,7 +453,7 @@ impl EffortByPrjDto {
     }
 }
 
-fn rebuild_project(model: &Rc<VecModel<EffortByPrjData>>, project_id: ProjectId, dev_id: DevId) {
+fn rebuild_project(model: &VecModel<EffortByPrjData>, project_id: ProjectId, dev_id: DevId) {
     for project_index in 0..model.row_count() {
         if project_index != project_id.0 {
             println!("rebuild_project - Skip project #{}", project_index);
@@ -413,32 +470,10 @@ fn rebuild_project(model: &Rc<VecModel<EffortByPrjData>>, project_id: ProjectId,
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
-    //let old_model = Rc::new(slint::VecModel::default());
-    let model = Rc::new(slint::VecModel::default());
-
-    // {
-    //     let model = old_model.clone();
-    //     let ui_weak = ui.as_weak();
-    //     slint::spawn_local(async move {
-    //         model.set_vec(get_todos().await);
-    //         ui_weak.upgrade().unwrap().set_loading(false);
-    //     })
-    //     .unwrap();
-    // }
+    let vec_model = Rc::new(slint::VecModel::default());
 
     let mut efforts = load_efforts_from_file("efforts.json");
-    if efforts.is_empty() {
-        println!("Creo un progetto di default");
-        efforts.push(EffortByPrjDto::new(0));
-    }
-
-    //let mut start_date = local_to_days(&(Local::now() - chrono::Duration::days(30)));
-
-    let start_date = efforts
-        .iter()
-        .map(|d| d.start)
-        .min()
-        .unwrap_or(local_to_days(&(Local::now() - chrono::Duration::days(30))));
+    let start_date = efforts.start_date();
 
     println!(
         "start_date: {:?} -> {}",
@@ -446,7 +481,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         days_to_local(start_date)
     );
 
-    for dto in efforts.iter() {
+    for dto in efforts.projects.iter() {
         println!(
             "Project {} start_date: {}",
             dto.project,
@@ -454,62 +489,43 @@ fn main() -> Result<(), Box<dyn Error>> {
         );
     }
 
-    for dto in efforts.iter_mut() {
+    for dto in efforts.projects.iter_mut() {
         dto.set_start_date(start_date);
     }
 
-    for dto in efforts {
-        model.push(dto.into());
+    for dto in efforts.projects.into_iter() {
+        vec_model.push(dto.into());
     }
 
     let weeks = std::rc::Rc::new(slint::VecModel::from(dates(&days_to_local(start_date))));
 
-    {
-        ui.as_weak()
-            .upgrade()
-            .unwrap()
-            .set_weeks(weeks.clone().into());
-    }
-
-    // {
-    //     let ui_weak = ui.as_weak();
-    //     let model = model.clone();
-    //     slint::spawn_local(async move {
-    //         ui_weak
-    //             .upgrade()
-    //             .unwrap()
-    //             .set_num_visible(get_todos().await);
-
-    //         let mut efforts = Vec::new();
-    //         for i in 0..model.row_count() {
-    //             let e = model.row_data(i).unwrap_or(EffortByPrjData::default());
-    //             efforts.push(EffortByPrjDto::from(&e)); // tua conversione
-    //         }
-
-    //         let _ = save_efforts_to_file(&efforts, "efforts.json");
-    //         println!("Saved!")
-
-    //         // for dto in efforts {
-    //         //     model.push(dto.into()); // EffortByDate::from(dto)
-    //         // }
-
-    //         // // poi:
-    //     })
-    //     .unwrap();
-    // }
+    ui.as_weak()
+        .upgrade()
+        .unwrap()
+        .set_weeks(weeks.clone().into());
 
     // Save Projects
     {
         let ui_weak = ui.as_weak();
-        let model = model.clone();
+        let vec_model = vec_model.clone();
         PjmCallback::get(&ui).on_save_file(move || {
-            let mut efforts = Vec::new();
-            for i in 0..model.row_count() {
-                let e = model.row_data(i).unwrap_or(EffortByPrjData::default());
-                efforts.push(EffortByPrjDto::from(&e)); // tua conversione
+            let mut projects = Vec::new();
+            for i in 0..vec_model.row_count() {
+                let e = vec_model.row_data(i).unwrap_or(EffortByPrjData::default());
+                projects.push(EffortByPrjDto::from(e)); // tua conversione
             }
 
-            let _ = save_efforts_to_file(&efforts, "efforts.json");
+            let orig = ui_weak.upgrade().unwrap().get_efforts();
+            let updated = EffortsData {
+                today: orig.today,
+                projects: ModelRc::new(slint::VecModel::from(
+                    projects
+                        .into_iter()
+                        .map(EffortByPrjData::from)
+                        .collect::<Vec<_>>(),
+                )),
+            };
+            let _ = save_efforts_to_file(&updated.into(), "efforts.json");
             if let Some(ui) = ui_weak.upgrade() {
                 PjmCallback::get(&ui).set_changed(false);
             }
@@ -518,13 +534,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // New Project
     {
-        let model = model.clone();
+        let vec_model = vec_model.clone();
         let ui_weak = ui.as_weak();
 
         PjmCallback::get(&ui).on_new_project(move || {
             println!("New Project");
-            let prj = EffortByPrjDto::new(model.row_count() as i32);
-            model.push(prj.into());
+            let prj = EffortByPrjDto::new(vec_model.row_count() as i32);
+            vec_model.push(prj.into());
             ui_weak.upgrade().unwrap();
         });
     }
@@ -532,10 +548,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Set Dev Effort
     {
         let ui_weak = ui.as_weak();
-        let model = model.clone();
+        let vec_model = vec_model.clone();
         PjmCallback::get(&ui).on_set_dev_effort(move |effort: EffortByDevData| {
             rebuild_project(
-                &model,
+                &vec_model,
                 ProjectId(effort.project as usize),
                 DevId(effort.dev as usize),
             );
@@ -548,10 +564,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Change effort
     {
         let ui_weak = ui.as_weak();
-        let model = model.clone();
+        let vec_model = vec_model.clone();
         PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
             rebuild_project(
-                &model,
+                &vec_model,
                 ProjectId(effort.project as usize),
                 DevId(effort.dev as usize),
             );
@@ -563,12 +579,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Search Worker
     {
-        let model = model.clone();
+        let vec_model = vec_model.clone();
         PjmCallback::get(&ui).on_search(move |text: SharedString| {
             println!("on_search {:?}", text);
 
-            for project_index in 0..model.row_count() {
-                let mut project = model.row_data(project_index).unwrap_or_default();
+            for project_index in 0..vec_model.row_count() {
+                let mut project = vec_model.row_data(project_index).unwrap_or_default();
                 let mut visible_prj = false;
 
                 for effort_index in 0..project.efforts.row_count() {
@@ -594,14 +610,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 break;
                             }
                         }
-
-                        // if (!visible_dev) {
-                        //     for data_index in 0..dev.datas.row_count() {
-                        //         let data = dev.datas.row_data(data_index).unwrap_or_default();
-                        //         data.visible = false;
-                        //         dev.datas.set_row_data(data_index, data);
-                        //     }
-                        // }
                     }
 
                     dev.visible = visible_dev;
@@ -609,21 +617,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
 
                 project.visible = visible_prj;
-                model.set_row_data(project_index, project); // ✅ NOTIFICA principale
+                vec_model.set_row_data(project_index, project); // ✅ NOTIFICA principale
             }
         });
     }
 
     // Add Row
     {
-        let model = model.clone();
-        //let ui_weak = ui.as_weak();
+        let vec_model = vec_model.clone();
 
         PjmCallback::get(&ui).on_add_row(move |project_id: i32, dev_id: i32| {
             println!("on_add_row - project: {} - dev: {}", project_id, dev_id);
 
-            for project_index in 0..model.row_count() {
-                let project = model.row_data(project_index).unwrap_or_default();
+            for project_index in 0..vec_model.row_count() {
+                let project = vec_model.row_data(project_index).unwrap_or_default();
                 if project.project != project_id {
                     continue;
                 }
@@ -656,8 +663,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
     }
 
-    ui.set_efforts(model.into());
-
+    ui.set_efforts(EffortsData {
+        today: efforts.today,
+        projects: vec_model.into(),
+    });
     ui.run()?;
 
     Ok(())

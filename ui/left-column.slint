@@ -1,5 +1,10 @@
 import { LineEdit, HorizontalBox, TextEdit } from "std-widgets.slint";
-import { AppState, EffortByPrjData, PjmCallback } from "global.slint";
+import {
+    AppState,
+    EffortByPrjData,
+    PjmCallback,
+    EffortsData,
+} from "global.slint";
 import { Styles } from "styles.slint";
 
 component Separatore inherits Rectangle {
@@ -10,7 +15,7 @@ component Separatore inherits Rectangle {
 }
 
 export component LeftColumn inherits Rectangle {
-    in property <[EffortByPrjData]> efforts;
+    in property <EffortsData> efforts;
     in-out property <length> viewport_y;
 
     width: 60px * 4;
@@ -18,7 +23,7 @@ export component LeftColumn inherits Rectangle {
     Flickable {
         viewport-y <=> root.viewport_y;
         VerticalLayout {
-            for item in root.efforts: Rectangle {
+            for item in root.efforts.projects: Rectangle {
                 VerticalLayout {
                     Rectangle {
                         HorizontalLayout {
