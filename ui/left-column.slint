@@ -88,7 +88,7 @@ export component LeftColumn inherits Rectangle {
                                                         }
 
                                                         Rectangle {
-                                                            background: data.remains == data.effort ? Colors.red : Colors.transparent;
+                                                            background: ((data.remains == data.effort && data.effort != 0) || (data.remains < 0)) ? Colors.red : Colors.transparent;
                                                             height: data.visible == false ? 0px : Styles.height;
 
                                                             Text {

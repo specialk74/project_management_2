@@ -174,6 +174,22 @@ impl From<EffortByDevData> for EffortByDevDto {
     }
 }
 
+impl EffortByDevData {
+    fn total(&mut self) {
+        let mut total = 0;
+        for day_index in 0..self.datas.row_count() {
+            let mut day = self.datas.row_data(day_index).unwrap_or_default();
+            total += EffortByDateDto::from(day.clone()).get_total();
+            day.total = total;
+            day.effort = self.effort;
+            day.remains = self.effort - day.total;
+            self.datas.set_row_data(day_index, day);
+        }
+        self.total = total;
+        self.remains = self.effort - self.total;
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortByPrjDto {
     text: String,
@@ -208,6 +224,23 @@ impl From<&EffortByPrjData> for EffortByPrjDto {
             text: d.text.clone().into(),
             project: d.project,
             efforts: d.efforts.iter().map(EffortByDevDto::from).collect(),
+        }
+    }
+}
+
+impl EffortByPrjData {
+    fn rebuild_dev(&self, dev: usize) {
+        for dev_index in 0..self.efforts.row_count() {
+            if dev_index != dev {
+                println!("rebuild_dev - Skip dev #{}", dev_index);
+                continue;
+            }
+            println!("rebuild_dev - Manage dev #{}", dev_index);
+
+            let mut dev = self.efforts.row_data(dev_index).unwrap_or_default();
+            dev.total();
+            self.efforts.set_row_data(dev_index, dev);
+            return;
         }
     }
 }
@@ -358,6 +391,20 @@ impl EffortByPrjDto {
     }
 }
 
+fn rebuild_project(model: &Rc<VecModel<EffortByPrjData>>, project_id: usize, dev_id: usize) {
+    for project_index in 0..model.row_count() {
+        if project_index != project_id {
+            println!("rebuild_project - Skip project #{}", project_index);
+            continue;
+        }
+        println!("rebuild_project - Manage project #{}", project_id);
+
+        let project = model.row_data(project_index).unwrap_or_default();
+        project.rebuild_dev(dev_id);
+        return;
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
@@ -482,33 +529,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_weak = ui.as_weak();
         let model = model.clone();
         PjmCallback::get(&ui).on_set_dev_effort(move |effort: EffortByDevData| {
-            for project_index in 0..model.row_count() {
-                if project_index != effort.project as usize {
-                    println!("Skip project #{}", project_index);
-                    continue;
-                }
-                println!("Manage project #{}", effort.project);
-
-                let project = model.row_data(project_index).unwrap_or_default();
-                for dev_index in 0..project.efforts.row_count() {
-                    if dev_index != effort.dev as usize {
-                        println!("Skip dev #{}", dev_index);
-                        continue;
-                    }
-                    println!("Manage dev #{}", dev_index);
-
-                    let mut dev = project.efforts.row_data(dev_index).unwrap_or_default();
-                    dev.remains = dev.effort - dev.total;
-
-                    for day_index in 0..dev.datas.row_count() {
-                        let mut day = dev.datas.row_data(day_index).unwrap_or_default();
-                        day.effort = dev.effort;
-                        day.remains = dev.remains;
-                        dev.datas.set_row_data(day_index, day);
-                    }
-                    project.efforts.set_row_data(dev_index, dev);
-                }
-            }
+            rebuild_project(&model, effort.project as usize, effort.dev as usize);
             if let Some(ui) = ui_weak.upgrade() {
                 PjmCallback::get(&ui).set_changed(true);
             }
@@ -520,55 +541,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_weak = ui.as_weak();
         let model = model.clone();
         PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
-            for project_index in 0..model.row_count() {
-                if project_index != effort.project as usize {
-                    println!("Skip project #{}", project_index);
-                    continue;
-                }
-                println!("Manage project #{}", effort.project);
-
-                let project = model.row_data(project_index).unwrap_or_default();
-                for dev_index in 0..project.efforts.row_count() {
-                    if dev_index != effort.dev as usize {
-                        println!("Skip dev #{}", dev_index);
-                        continue;
-                    }
-                    println!("Manage dev #{}", dev_index);
-
-                    let mut dev = project.efforts.row_data(dev_index).unwrap_or_default();
-
-                    let mut total = 0;
-                    for day_index in 0..dev.datas.row_count() {
-                        let mut day = dev.datas.row_data(day_index).unwrap_or_default();
-                        total += EffortByDateDto::from(day.clone()).get_total();
-                        //println!("total: {}", total);
-                        day.total = total;
-                        dev.datas.set_row_data(day_index, day);
-                    }
-                    dev.total = total;
-                    dev.remains = dev.effort - dev.total;
-
-                    for day_index in 0..dev.datas.row_count() {
-                        let mut day = dev.datas.row_data(day_index).unwrap_or_default();
-                        day.remains = dev.effort - day.total;
-                        dev.datas.set_row_data(day_index, day);
-                    }
-
-                    project.efforts.set_row_data(dev_index, dev);
-                }
-            }
-
-            // if let Some(project) = model.row_data(effort.project as usize) {
-            //     if let Some(dev) = project.efforts.row_data(effort.dev as usize) {
-            //         if let Some(mut day) = dev.datas.row_data(effort.date as usize) {
-            //             day.total = EffortByDateDto::from(day.clone()).get_total();
-            //             dev.datas.set_row_data(effort.date as usize, day);
-            //             //project.efforts.set_row_data(effort.dev as usize, dev);
-            //             //model.set_row_data(effort.project as usize, project);
-            //         }
-            //     }
-            // }
-
+            rebuild_project(&model, effort.project as usize, effort.dev as usize);
             if let Some(ui) = ui_weak.upgrade() {
                 PjmCallback::get(&ui).set_changed(true);
             }
