@@ -56,6 +56,11 @@ impl From<i32> for Devs {
     }
 }
 
+#[derive(PartialEq, Debug)]
+struct ProjectId(usize);
+#[derive(PartialEq, Debug)]
+struct DevId(usize);
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EffortByDateDto {
     pub total: i32,
@@ -229,17 +234,17 @@ impl From<&EffortByPrjData> for EffortByPrjDto {
 }
 
 impl EffortByPrjData {
-    fn rebuild_dev(&self, dev: usize) {
+    fn rebuild_dev(&self, dev_id: DevId) {
         for dev_index in 0..self.efforts.row_count() {
-            if dev_index != dev {
+            if dev_index != dev_id.0 {
                 println!("rebuild_dev - Skip dev #{}", dev_index);
                 continue;
             }
-            println!("rebuild_dev - Manage dev #{}", dev_index);
+            println!("rebuild_dev - Manage dev #{:?}", dev_id);
 
-            let mut dev = self.efforts.row_data(dev_index).unwrap_or_default();
+            let mut dev = self.efforts.row_data(dev_id.0).unwrap_or_default();
             dev.total();
-            self.efforts.set_row_data(dev_index, dev);
+            self.efforts.set_row_data(dev_id.0, dev);
             return;
         }
     }
@@ -391,15 +396,15 @@ impl EffortByPrjDto {
     }
 }
 
-fn rebuild_project(model: &Rc<VecModel<EffortByPrjData>>, project_id: usize, dev_id: usize) {
+fn rebuild_project(model: &Rc<VecModel<EffortByPrjData>>, project_id: ProjectId, dev_id: DevId) {
     for project_index in 0..model.row_count() {
-        if project_index != project_id {
+        if project_index != project_id.0 {
             println!("rebuild_project - Skip project #{}", project_index);
             continue;
         }
-        println!("rebuild_project - Manage project #{}", project_id);
+        println!("rebuild_project - Manage project #{:?}", project_id);
 
-        let project = model.row_data(project_index).unwrap_or_default();
+        let project = model.row_data(project_id.0).unwrap_or_default();
         project.rebuild_dev(dev_id);
         return;
     }
@@ -529,7 +534,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_weak = ui.as_weak();
         let model = model.clone();
         PjmCallback::get(&ui).on_set_dev_effort(move |effort: EffortByDevData| {
-            rebuild_project(&model, effort.project as usize, effort.dev as usize);
+            rebuild_project(
+                &model,
+                ProjectId(effort.project as usize),
+                DevId(effort.dev as usize),
+            );
             if let Some(ui) = ui_weak.upgrade() {
                 PjmCallback::get(&ui).set_changed(true);
             }
@@ -541,7 +550,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_weak = ui.as_weak();
         let model = model.clone();
         PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
-            rebuild_project(&model, effort.project as usize, effort.dev as usize);
+            rebuild_project(
+                &model,
+                ProjectId(effort.project as usize),
+                DevId(effort.dev as usize),
+            );
             if let Some(ui) = ui_weak.upgrade() {
                 PjmCallback::get(&ui).set_changed(true);
             }
