@@ -249,14 +249,14 @@ impl EffortByPrjData {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortsDto {
-    today: i32,
+    week_off: Vec<i32>,
     projects: Vec<EffortByPrjDto>,
 }
 
 impl Default for EffortsDto {
     fn default() -> Self {
         Self {
-            today: local_to_days(&Local::now()),
+            week_off: vec![],
             projects: vec![EffortByPrjDto::new(0)],
         }
     }
@@ -265,7 +265,7 @@ impl Default for EffortsDto {
 impl From<EffortsDto> for EffortsData {
     fn from(d: EffortsDto) -> Self {
         Self {
-            today: d.today,
+            week_off: ModelRc::new(slint::VecModel::from(d.week_off)),
             projects: ModelRc::new(slint::VecModel::from(
                 d.projects
                     .into_iter()
@@ -279,7 +279,7 @@ impl From<EffortsDto> for EffortsData {
 impl From<EffortsData> for EffortsDto {
     fn from(d: EffortsData) -> Self {
         Self {
-            today: d.today,
+            week_off: d.week_off.iter().map(i32::from).collect(),
             projects: d.projects.iter().map(EffortByPrjDto::from).collect(),
         }
     }
@@ -470,7 +470,8 @@ fn rebuild_project(model: &VecModel<EffortByPrjData>, project_id: ProjectId, dev
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
-    let vec_model = Rc::new(slint::VecModel::default());
+    let vec_model_projects = Rc::new(slint::VecModel::default());
+    let vec_model_week_off = Rc::new(slint::VecModel::default());
 
     let mut efforts = load_efforts_from_file("efforts.json");
     let start_date = efforts.start_date();
@@ -494,7 +495,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     for dto in efforts.projects.into_iter() {
-        vec_model.push(dto.into());
+        vec_model_projects.push(dto.into());
     }
 
     let weeks = std::rc::Rc::new(slint::VecModel::from(dates(&days_to_local(start_date))));
@@ -507,17 +508,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Save Projects
     {
         let ui_weak = ui.as_weak();
-        let vec_model = vec_model.clone();
+        let vec_model_projects = vec_model_projects.clone();
+        let vec_model_week_off = vec_model_week_off.clone();
         PjmCallback::get(&ui).on_save_file(move || {
             let mut projects = Vec::new();
-            for i in 0..vec_model.row_count() {
-                let e = vec_model.row_data(i).unwrap_or(EffortByPrjData::default());
+            for i in 0..vec_model_projects.row_count() {
+                let e = vec_model_projects
+                    .row_data(i)
+                    .unwrap_or(EffortByPrjData::default());
                 projects.push(EffortByPrjDto::from(e)); // tua conversione
             }
 
-            let orig = ui_weak.upgrade().unwrap().get_efforts();
+            let mut week_off = Vec::new();
+            for i in 0..vec_model_week_off.row_count() {
+                let e = vec_model_week_off.row_data(i).unwrap_or(0);
+                week_off.push(e);
+            }
+
             let updated = EffortsData {
-                today: orig.today,
+                week_off: ModelRc::new(slint::VecModel::from(week_off)),
                 projects: ModelRc::new(slint::VecModel::from(
                     projects
                         .into_iter()
@@ -534,13 +543,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // New Project
     {
-        let vec_model = vec_model.clone();
+        let vec_model_projects = vec_model_projects.clone();
         let ui_weak = ui.as_weak();
 
         PjmCallback::get(&ui).on_new_project(move || {
             println!("New Project");
-            let prj = EffortByPrjDto::new(vec_model.row_count() as i32);
-            vec_model.push(prj.into());
+            let prj = EffortByPrjDto::new(vec_model_projects.row_count() as i32);
+            vec_model_projects.push(prj.into());
             ui_weak.upgrade().unwrap();
         });
     }
@@ -548,10 +557,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Set Dev Effort
     {
         let ui_weak = ui.as_weak();
-        let vec_model = vec_model.clone();
+        let vec_model_projects = vec_model_projects.clone();
         PjmCallback::get(&ui).on_set_dev_effort(move |effort: EffortByDevData| {
             rebuild_project(
-                &vec_model,
+                &vec_model_projects,
                 ProjectId(effort.project as usize),
                 DevId(effort.dev as usize),
             );
@@ -564,10 +573,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Change effort
     {
         let ui_weak = ui.as_weak();
-        let vec_model = vec_model.clone();
+        let vec_model_projects = vec_model_projects.clone();
         PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
             rebuild_project(
-                &vec_model,
+                &vec_model_projects,
                 ProjectId(effort.project as usize),
                 DevId(effort.dev as usize),
             );
@@ -579,12 +588,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Search Worker
     {
-        let vec_model = vec_model.clone();
+        let vec_model_projects = vec_model_projects.clone();
         PjmCallback::get(&ui).on_search(move |text: SharedString| {
             println!("on_search {:?}", text);
 
-            for project_index in 0..vec_model.row_count() {
-                let mut project = vec_model.row_data(project_index).unwrap_or_default();
+            for project_index in 0..vec_model_projects.row_count() {
+                let mut project = vec_model_projects
+                    .row_data(project_index)
+                    .unwrap_or_default();
                 let mut visible_prj = false;
 
                 for effort_index in 0..project.efforts.row_count() {
@@ -617,20 +628,22 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
 
                 project.visible = visible_prj;
-                vec_model.set_row_data(project_index, project); // ✅ NOTIFICA principale
+                vec_model_projects.set_row_data(project_index, project); // ✅ NOTIFICA principale
             }
         });
     }
 
     // Add Row
     {
-        let vec_model = vec_model.clone();
+        let vec_model_projects = vec_model_projects.clone();
 
         PjmCallback::get(&ui).on_add_row(move |project_id: i32, dev_id: i32| {
             println!("on_add_row - project: {} - dev: {}", project_id, dev_id);
 
-            for project_index in 0..vec_model.row_count() {
-                let project = vec_model.row_data(project_index).unwrap_or_default();
+            for project_index in 0..vec_model_projects.row_count() {
+                let project = vec_model_projects
+                    .row_data(project_index)
+                    .unwrap_or_default();
                 if project.project != project_id {
                     continue;
                 }
@@ -664,8 +677,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     ui.set_efforts(EffortsData {
-        today: efforts.today,
-        projects: vec_model.into(),
+        week_off: vec_model_week_off.into(),
+        projects: vec_model_projects.into(),
     });
     ui.run()?;
 
