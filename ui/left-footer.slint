@@ -24,13 +24,13 @@ export component LeftFooter inherits Rectangle {
                             background: data.col;
                             HorizontalLayout {
 
-                                Text {
+                                Cell-RO {
                                     width: Styles.width - 20px;
                                     font-weight: 800;
-                                    color: data.text-color;
+                                    text_color: data.text-color;
                                     text: data.title;
                                     horizontal-alignment: center;
-                                    vertical-alignment: center;
+                                    //vertical-alignment: center;
                                 }
 
                                 Text {
