@@ -12,5 +12,5 @@
 
 .cargo
 .vscode
-efforts.json
+*.json
 Cargo.lock
