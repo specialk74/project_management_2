@@ -19,6 +19,7 @@ import {
     Cell-RW,
     PjmCallback,
     EffortsData,
+    DayData,
 } from "global.slint";
 
 export {PjmCallback}
@@ -95,14 +96,14 @@ export component AppWindow inherits Window {
     in-out property <EffortsData> efforts;
     in property <int> num_visible: 1;
     in property <bool> loading: true;
-    property <length> viewport-y;
-    property <length> viewport-x;
+    property <length> viewport_y;
+    property <length> viewport_x;
     property <length> width1: 150px;
-    in property <[string]> weeks;
+    in property <[DayData]> weeks;
 
     default-font-size: Styles.font-size;
     default-font-family: Styles.font-family;
-    title: PjmCallback.changed ? "Project Management Effort Tracker App (*)" : "Project Management Effort Tracker App";
+    title: "Project Management Effort Tracker App " + (PjmCallback.changed ? "(*)" : "");
     min-width: 1024px;
     //height: 768px;
     resize-border-width: 10px;
@@ -111,7 +112,7 @@ export component AppWindow inherits Window {
     VerticalLayout {
         Header {
             weeks: root.weeks;
-            viewport_x <=> root.viewport-x;
+            viewport_x <=> root.viewport_x;
             efforts: root.efforts;
         }
 
@@ -125,14 +126,14 @@ export component AppWindow inherits Window {
                 efforts: root.efforts;
 
                 // binding verticale
-                viewport_y <=> root.viewport-y;
+                viewport_y <=> root.viewport_y;
             }
 
             RightColumn {
                 efforts: root.efforts;
 
-                viewport_y <=> root.viewport-y;
-                viewport_x <=> root.viewport-x;
+                viewport_y <=> root.viewport_y;
+                viewport_x <=> root.viewport_x;
             }
 
             spacing: 0px;
@@ -146,20 +147,19 @@ export component AppWindow inherits Window {
 
         Header {
             weeks: root.weeks;
-            viewport_x <=> root.viewport-x;
+            viewport_x <=> root.viewport_x;
             efforts: root.efforts;
         }
 
         HorizontalLayout {
             LeftFooter {
-                weeks: root.weeks;
                 efforts: root.efforts;
             }
 
             RightFooter {
                 efforts: root.efforts;
                 weeks: root.weeks;
-                viewport_x <=> root.viewport-x;
+                viewport_x <=> root.viewport_x;
             }
         }
     }

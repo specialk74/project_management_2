@@ -1,7 +1,7 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use chrono::{DateTime, Datelike, Local, TimeZone};
+use chrono::{Datelike, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use slint::{Model, ModelRc, SharedString, VecModel};
 use std::fs::File;
@@ -68,18 +68,31 @@ pub struct EffortByDateDto {
     pub dev: Devs,
     pub project: i32,
     pub effort: i32,
-    pub date: i32,
+    pub week: i32,
     pub persons: Vec<String>,
+}
+
+fn info_cell(person: &str) -> Option<(&str, i32)> {
+    let mut split = person.split("|");
+    if split.clone().count() != 2 {
+        return None;
+    }
+    Some((
+        split.next().unwrap(),
+        split
+            .next()
+            .map_or(0, |f| f.parse::<i32>().map_or(0, |f| f * 40 / 100)),
+    ))
 }
 
 impl EffortByDateDto {
     fn get_total(&self) -> i32 {
         let mut total = 0;
-        for person in self.persons.iter() {
-            let mut split = person.split("|");
-            total += split
-                .nth(1)
-                .map_or(0, |f| f.parse::<i32>().map_or(0, |f| f * 40 / 100));
+        for item in self.persons.iter() {
+            if let Some((person, value)) = info_cell(item) {
+                println!("person: {} - value: {}", person, value);
+                total += value;
+            }
         }
 
         total
@@ -94,7 +107,7 @@ impl From<EffortByDateDto> for EffortByDateData {
             dev: d.dev.into(),
             project: d.project,
             effort: d.effort,
-            date: d.date,
+            week: d.week,
             persons: ModelRc::new(slint::VecModel::from(
                 d.persons.iter().map(SharedString::from).collect::<Vec<_>>(),
             )),
@@ -110,7 +123,7 @@ impl From<EffortByDateData> for EffortByDateDto {
             dev: d.dev.into(),
             project: d.project,
             effort: d.effort,
-            date: d.date,
+            week: d.week,
             persons: d.persons.iter().map(|s| s.to_string()).collect(),
         }
     }
@@ -195,7 +208,8 @@ impl EffortByDevData {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortByPrjDto {
     text: String,
-    start: i32,
+    start_week: i32,
+    end_week: i32,
     project: i32,
     visible: bool,
     efforts: Vec<EffortByDevDto>,
@@ -204,7 +218,8 @@ struct EffortByPrjDto {
 impl From<EffortByPrjDto> for EffortByPrjData {
     fn from(d: EffortByPrjDto) -> Self {
         Self {
-            start: d.start,
+            start_week: d.start_week,
+            end_week: d.end_week,
             text: SharedString::from(d.text.clone()),
             project: d.project,
             visible: d.visible,
@@ -221,7 +236,8 @@ impl From<EffortByPrjDto> for EffortByPrjData {
 impl From<EffortByPrjData> for EffortByPrjDto {
     fn from(d: EffortByPrjData) -> Self {
         Self {
-            start: d.start,
+            start_week: d.start_week,
+            end_week: d.end_week,
             visible: d.visible,
             text: d.text.clone().into(),
             project: d.project,
@@ -250,6 +266,7 @@ impl EffortByPrjData {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortsDto {
     week_off: Vec<i32>,
+    worker_names: Vec<String>,
     projects: Vec<EffortByPrjDto>,
 }
 
@@ -257,6 +274,7 @@ impl Default for EffortsDto {
     fn default() -> Self {
         Self {
             week_off: vec![],
+            worker_names: vec![],
             projects: vec![EffortByPrjDto::new(0)],
         }
     }
@@ -266,6 +284,12 @@ impl From<EffortsDto> for EffortsData {
     fn from(d: EffortsDto) -> Self {
         Self {
             week_off: ModelRc::new(slint::VecModel::from(d.week_off)),
+            worker_names: ModelRc::new(slint::VecModel::from(
+                d.worker_names
+                    .iter()
+                    .map(SharedString::from)
+                    .collect::<Vec<_>>(),
+            )),
             projects: ModelRc::new(slint::VecModel::from(
                 d.projects
                     .into_iter()
@@ -279,43 +303,61 @@ impl From<EffortsDto> for EffortsData {
 impl From<EffortsData> for EffortsDto {
     fn from(d: EffortsData) -> Self {
         Self {
-            week_off: d.week_off.iter().map(i32::from).collect(),
+            week_off: d.week_off.iter().collect(),
+            worker_names: d.worker_names.iter().map(|s| s.to_string()).collect(),
             projects: d.projects.iter().map(EffortByPrjDto::from).collect(),
         }
     }
 }
 
 impl EffortsDto {
-    fn start_date(&self) -> i32 {
-        self.projects
+    /// Retreive the minimum date from all projects or, in case no projects, 30 days from today in the past.
+    fn start_end_weeks(&self) -> (i32, i32) {
+        let start_week = self
+            .projects
             .iter()
-            .map(|d| d.start)
+            .map(|d| d.start_week)
             .min()
-            .unwrap_or(local_to_days(&(Local::now() - chrono::Duration::days(30))))
+            .unwrap_or(local_to_days(
+                &(Utc::now().date_naive() - chrono::Duration::days(30)),
+            ));
+        let end_week = self
+            .projects
+            .iter()
+            .map(|d| d.end_week)
+            .max()
+            .unwrap_or(local_to_days(
+                &(Utc::now().date_naive() + chrono::Duration::days(365)),
+            ));
+
+        (start_week, end_week)
     }
 }
 
-fn dates(start_date: &chrono::DateTime<Local>) -> Vec<SharedString> {
-    let mut dates: Vec<SharedString> = Vec::new();
+fn weeks_list(start_date: &chrono::NaiveDate, end_date: &chrono::NaiveDate) -> Vec<DayDto> {
+    let mut weeks: Vec<DayDto> = Vec::new();
 
     // Recupera il primo giorno della settimana della data passata
-    let mut start_date = primo_giorno_settimana_corrente(start_date);
+    let mut start_week = primo_giorno_settimana_corrente(start_date);
+    let end_week = primo_giorno_settimana_corrente(end_date);
 
-    // Quale settimana dell'anno è?
-    let week_number = 52 - start_date.iso_week().week();
-
-    // Dalla data di partenza per oltre 1 anno
-    for _ in 0..52 + week_number {
-        let date_str = start_date.format("%y-%m-%d").to_string();
-        dates.push(date_str.clone().into());
-        start_date += chrono::Duration::days(7);
-        start_date = primo_giorno_settimana_corrente(&start_date);
+    while start_week < end_week {
+        weeks.push(DayDto::new(local_to_days(&start_week)));
+        start_week += chrono::Duration::days(7);
+        start_week = primo_giorno_settimana_corrente(&start_week);
     }
-    dates
+
+    weeks
 }
 
-fn primo_giorno_settimana_corrente(data: &chrono::DateTime<Local>) -> chrono::DateTime<Local> {
+fn primo_giorno_settimana_corrente(data: &chrono::NaiveDate) -> chrono::NaiveDate {
     let giorni_da_lunedi = data.weekday().num_days_from_monday();
+    // println!(
+    //     "data: {:?} - giorni_da_lunedi: {} - diff: {}",
+    //     data,
+    //     giorni_da_lunedi,
+    //     *data - chrono::Duration::days(giorni_da_lunedi as i64)
+    // );
     *data - chrono::Duration::days(giorni_da_lunedi as i64)
 }
 
@@ -356,12 +398,12 @@ fn load_efforts_from_file(path: &str) -> EffortsDto {
 //     3
 // }
 
-fn get_one_year(dev: &Devs, project: i32) -> Vec<EffortByDateDto> {
+fn get_weeks(dev: &Devs, project: i32, num_weeks: i64) -> Vec<EffortByDateDto> {
     let mut ret = vec![];
-
-    for index in 0..52 {
+    let mut start_week = local_to_days(&primo_giorno_settimana_corrente(&Utc::now().date_naive()));
+    for _ in 0..num_weeks {
         ret.push(EffortByDateDto {
-            date: index,
+            week: start_week,
             effort: 0,
             dev: *dev,
             project,
@@ -369,13 +411,14 @@ fn get_one_year(dev: &Devs, project: i32) -> Vec<EffortByDateDto> {
             total: 0,
             persons: vec!["".to_string()],
         });
+        start_week += 7;
     }
     ret
 }
 
 impl EffortByDevDto {
-    fn new(dev: Devs, project: i32) -> Self {
-        let one_year = get_one_year(&dev, project);
+    fn new(dev: Devs, project: i32, num_weeks: i64) -> Self {
+        let weeks = get_weeks(&dev, project, num_weeks);
         Self {
             total: 0,
             project,
@@ -384,14 +427,14 @@ impl EffortByDevDto {
             effort: 0,
             remains: 0,
             max: 1,
-            datas: one_year,
+            datas: weeks,
         }
     }
 
-    fn add_days(&mut self, days: i32) {
+    fn prepend_weeks(&mut self, weeks: i32, mut start_week: i32) {
         let data = self.datas.first().unwrap().clone();
 
-        for day in 0..days {
+        for _ in 0..weeks {
             self.datas.insert(
                 0,
                 EffortByDateDto {
@@ -400,56 +443,138 @@ impl EffortByDevDto {
                     dev: data.dev,
                     project: data.project,
                     effort: data.effort,
-                    date: days - day,
+                    week: 0,
                     persons: vec!["".to_string()],
                 },
             );
         }
+
+        for data in self.datas.iter_mut() {
+            data.week = start_week;
+            start_week += 7;
+        }
+    }
+
+    fn append_weeks(&mut self, weeks: i32, mut start_week: i32) {
+        let data = self.datas.last().unwrap().clone();
+
+        for _ in 0..weeks {
+            self.datas.push(EffortByDateDto {
+                total: data.total,
+                remains: data.remains,
+                dev: data.dev,
+                project: data.project,
+                effort: data.effort,
+                week: 0,
+                persons: vec!["".to_string()],
+            });
+        }
+
+        for data in self.datas.iter_mut() {
+            data.week = start_week;
+            start_week += 7;
+        }
     }
 }
 
-fn local_to_days(dt: &DateTime<Local>) -> i32 {
-    let epoch = Local.timestamp_opt(0, 0).unwrap();
-    let seconds = dt.timestamp() - epoch.timestamp();
-    (seconds / 86_400) as i32
+fn local_to_days(dt: &NaiveDate) -> i32 {
+    dt.to_epoch_days()
+    // let epoch = NaiveDate.timestamp_opt(0, 0).unwrap();
+    // let seconds = dt.timestamp() - epoch.timestamp();
+
+    // println!(
+    //     "local_to_days - dt: {} - epoch: {} - seconds: {} - ret: {}",
+    //     dt,
+    //     epoch,
+    //     seconds,
+    //     (seconds / 86_400) as i32
+    // );
+    // (seconds / 86_400) as i32
 }
 
-fn days_to_local(days: i32) -> DateTime<Local> {
-    let seconds = (days as i64) * 86_400;
-    Local.timestamp_opt(seconds, 0).unwrap()
+fn days_to_local(days: i32) -> NaiveDate {
+    //let seconds = (days as i64) * 86_400;
+    //NaiveDate.timestamp_opt(seconds, 0).unwrap()
+    NaiveDate::from_epoch_days(days).unwrap()
 }
 
 impl EffortByPrjDto {
     fn new(project: i32) -> Self {
+        let num_weeks = 52;
+        let start_date = local_to_days(&Utc::now().date_naive());
+        let end_date =
+            local_to_days(&(Utc::now().date_naive() + chrono::Duration::weeks(num_weeks)));
         EffortByPrjDto {
             project,
-            start: local_to_days(&Local::now()),
+            start_week: start_date,
+            end_week: end_date,
             visible: true,
             text: "New Project".to_string(),
             efforts: vec![
-                EffortByDevDto::new(Devs::Mcsw, project),
-                EffortByDevDto::new(Devs::Sms, project),
-                EffortByDevDto::new(Devs::Mvh, project),
-                EffortByDevDto::new(Devs::Hw, project),
-                EffortByDevDto::new(Devs::Ele, project),
-                EffortByDevDto::new(Devs::TestHw, project),
-                EffortByDevDto::new(Devs::TestFw, project),
-                EffortByDevDto::new(Devs::TestSys, project),
-                EffortByDevDto::new(Devs::Pjm, project),
+                EffortByDevDto::new(Devs::Mcsw, project, num_weeks),
+                EffortByDevDto::new(Devs::Sms, project, num_weeks),
+                EffortByDevDto::new(Devs::Mvh, project, num_weeks),
+                EffortByDevDto::new(Devs::Hw, project, num_weeks),
+                EffortByDevDto::new(Devs::Ele, project, num_weeks),
+                EffortByDevDto::new(Devs::TestHw, project, num_weeks),
+                EffortByDevDto::new(Devs::TestFw, project, num_weeks),
+                EffortByDevDto::new(Devs::TestSys, project, num_weeks),
+                EffortByDevDto::new(Devs::Pjm, project, num_weeks),
             ],
         }
     }
 
-    fn set_start_date(&mut self, start: i32) {
-        if self.start <= start {
-            return;
+    fn set_date(&mut self, start_week: i32, end_week: i32) {
+        if self.start_week > start_week {
+            let diff = (self.start_week - start_week) / 7;
+            for dev in self.efforts.iter_mut() {
+                dev.prepend_weeks(diff, start_week);
+            }
+            self.start_week = start_week;
         }
 
-        let diff = (self.start - start) / 7;
-        for dev in self.efforts.iter_mut() {
-            dev.add_days(diff);
+        if self.end_week < end_week {
+            let diff = (end_week - self.end_week) / 7;
+            for dev in self.efforts.iter_mut() {
+                dev.append_weeks(diff, start_week);
+            }
+            self.end_week = end_week
         }
-        self.start = start;
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct DayDto {
+    week: i32,
+    text: String,
+}
+
+impl DayDto {
+    fn new(week: i32) -> Self {
+        //let text = days_to_local(week).format("%y-%m-%d").to_string();
+        //println!("week: {} - text: {}", week, text);
+        Self {
+            week,
+            text: days_to_local(week).format("%y-%m-%d").to_string(),
+        }
+    }
+}
+
+impl From<DayData> for DayDto {
+    fn from(d: DayData) -> Self {
+        Self {
+            week: d.week,
+            text: d.text.to_string(),
+        }
+    }
+}
+
+impl From<DayDto> for DayData {
+    fn from(d: DayDto) -> Self {
+        Self {
+            week: d.week,
+            text: d.text.into(),
+        }
     }
 }
 
@@ -472,44 +597,46 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let vec_model_projects = Rc::new(slint::VecModel::default());
     let vec_model_week_off = Rc::new(slint::VecModel::default());
+    let vec_model_worker_names = Rc::new(slint::VecModel::default());
 
-    let mut efforts = load_efforts_from_file("efforts.json");
-    let start_date = efforts.start_date();
+    let mut app_info = load_efforts_from_file("efforts.json");
+    let (start_week, end_week) = app_info.start_end_weeks();
 
-    println!(
-        "start_date: {:?} -> {}",
-        start_date,
-        days_to_local(start_date)
-    );
+    println!("start_week: {} - end_week: {}", start_week, end_week);
 
-    for dto in efforts.projects.iter() {
-        println!(
-            "Project {} start_date: {}",
-            dto.project,
-            days_to_local(dto.start)
-        );
+    let weeks_day_dto = weeks_list(&days_to_local(start_week), &days_to_local(end_week));
+    let weeks_day_data = ModelRc::new(slint::VecModel::from(
+        weeks_day_dto
+            .into_iter()
+            .map(DayData::from)
+            .collect::<Vec<_>>(),
+    ));
+
+    ui.as_weak().upgrade().unwrap().set_weeks(weeks_day_data);
+
+    for dto in app_info.projects.iter_mut() {
+        dto.set_date(start_week, end_week);
     }
 
-    for dto in efforts.projects.iter_mut() {
-        dto.set_start_date(start_date);
-    }
-
-    for dto in efforts.projects.into_iter() {
+    for dto in app_info.projects.into_iter() {
         vec_model_projects.push(dto.into());
     }
 
-    let weeks = std::rc::Rc::new(slint::VecModel::from(dates(&days_to_local(start_date))));
+    for person in app_info.worker_names {
+        vec_model_worker_names.push(person.into());
+    }
 
-    ui.as_weak()
-        .upgrade()
-        .unwrap()
-        .set_weeks(weeks.clone().into());
+    let this_week = local_to_days(&primo_giorno_settimana_corrente(&Utc::now().date_naive()));
+    PjmCallback::get(&ui).set_this_week(this_week);
+    println!("this_week: {}", this_week);
 
     // Save Projects
     {
         let ui_weak = ui.as_weak();
         let vec_model_projects = vec_model_projects.clone();
         let vec_model_week_off = vec_model_week_off.clone();
+        let vec_model_worker_names = vec_model_worker_names.clone();
+
         PjmCallback::get(&ui).on_save_file(move || {
             let mut projects = Vec::new();
             for i in 0..vec_model_projects.row_count() {
@@ -525,14 +652,23 @@ fn main() -> Result<(), Box<dyn Error>> {
                 week_off.push(e);
             }
 
+            let mut worker_names = Vec::new();
+            for i in 0..vec_model_worker_names.row_count() {
+                let e = vec_model_worker_names
+                    .row_data(i)
+                    .unwrap_or(SharedString::default());
+                worker_names.push(e);
+            }
+
             let updated = EffortsData {
-                week_off: ModelRc::new(slint::VecModel::from(week_off)),
-                projects: ModelRc::new(slint::VecModel::from(
+                week_off: ModelRc::new(VecModel::from(week_off)),
+                projects: ModelRc::new(VecModel::from(
                     projects
                         .into_iter()
                         .map(EffortByPrjData::from)
                         .collect::<Vec<_>>(),
                 )),
+                worker_names: ModelRc::new(VecModel::from(worker_names)),
             };
             let _ = save_efforts_to_file(&updated.into(), "efforts.json");
             if let Some(ui) = ui_weak.upgrade() {
@@ -574,7 +710,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     {
         let ui_weak = ui.as_weak();
         let vec_model_projects = vec_model_projects.clone();
+        let vec_model_worker_names = vec_model_worker_names.clone();
         PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
+            for i in 0..effort.persons.row_count() {
+                if let Some((person, _)) = info_cell(effort.persons.row_data(i).unwrap().as_str()) {
+                    if !person.is_empty() {
+                        let mut founded = false;
+                        for j in 0..vec_model_worker_names.row_count() {
+                            let worker = vec_model_worker_names.row_data(j).unwrap().to_string();
+                            if person == worker {
+                                founded = true;
+                                break;
+                            }
+                        }
+                        if !founded {
+                            vec_model_worker_names.push(SharedString::from(person));
+                        }
+                    }
+                }
+            }
+
             rebuild_project(
                 &vec_model_projects,
                 ProjectId(effort.project as usize),
@@ -679,6 +834,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.set_efforts(EffortsData {
         week_off: vec_model_week_off.into(),
         projects: vec_model_projects.into(),
+        worker_names: vec_model_worker_names.into(),
     });
     ui.run()?;
 

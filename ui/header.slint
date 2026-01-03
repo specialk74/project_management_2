@@ -3,13 +3,15 @@ import {
     EffortByPrjData,
     PjmCallback,
     EffortsData,
+    DayData,
 } from "global.slint";
 import { Styles } from "styles.slint";
+import { HorizontalBox } from "std-widgets.slint";
 
 export component Header inherits Rectangle {
     in-out property <length> viewport_x;
     in property <EffortsData> efforts;
-    in property <[string]> weeks;
+    in property <[DayData]> weeks;
 
     height: Styles.height;
     HorizontalLayout {
@@ -21,11 +23,18 @@ export component Header inherits Rectangle {
             viewport-x <=> root.viewport_x;
             HorizontalLayout {
                 for data in weeks: Rectangle {
-                //     background: data == root.efforts.current_week ? #ffff00 : Colors.green;
-                     width: Styles.width;
-                    Text {
-                        text: data;
-                        //color: black;
+                    HorizontalLayout {
+                        Rectangle {
+                            background: data.week == PjmCallback.this_week ? #00ce3a : Colors.transparent;
+                            width: data.week == PjmCallback.this_week ? PjmCallback.this_week_width : 0px;
+                        }
+
+                        Rectangle {
+                            width: Styles.width;
+                            Text {
+                                text: data.text;
+                            }
+                        }
                     }
                 }
             }

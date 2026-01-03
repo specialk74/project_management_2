@@ -1,15 +1,17 @@
-import { AppState, EffortByPrjData, EffortsData } from "global.slint";
+import {
+    AppState,
+    EffortByPrjData,
+    EffortsData,
+    PjmCallback,
+    Cell-RO,
+} from "global.slint";
 import { Styles } from "styles.slint";
 
 export component LeftFooter inherits Rectangle {
-    in property <[string]> weeks;
-
-    in-out property <length> viewport_x;
     in property <EffortsData> efforts;
 
-    height: Styles.height * (max(AppState.model.length, AppState.worker_names.length) + 1);
+    height: Styles.height * (max(AppState.model.length, efforts.worker_names.length) + 1);
     width: 60px * 4;
-
     HorizontalLayout {
         // I vari dev
         Rectangle {
@@ -36,7 +38,7 @@ export component LeftFooter inherits Rectangle {
                                     color: data.text-color;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
-                                    text: "1";
+                                    text: "0";
                                 }
                             }
                         }
@@ -48,15 +50,12 @@ export component LeftFooter inherits Rectangle {
         // I vari worker
         Rectangle {
             VerticalLayout {
-                for data[index] in AppState.worker_names: Rectangle {
+                for name[index] in efforts.worker_names: Rectangle {
                     height: Styles.height;
                     background: index.mod(2) == 0 ? Colors.gray : Colors.transparent;
-                    Text {
+                    Cell-RO {
                         width: Styles.width;
-                        //color: black;
-                        text: data;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                        text: name;
                     }
                 }
             }

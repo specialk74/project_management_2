@@ -26,20 +26,6 @@ export global AppState {
         { title: "Sys Test", col: Colors.orange, text-color: Colors.black },
         { title: "Pjm", col: Colors.cyan, text-color: Colors.black }
     ];
-
-    in property <[string]> worker_names: [
-        "Alice",
-        "Bob",
-        "Charlie",
-        "David",
-        "Eve",
-        "Frank",
-        "Grace",
-        "Heidi",
-        "Ivan",
-        "Judy",
-        "Andrea"
-    ];
 }
 
 export struct EffortByDateData {
@@ -48,7 +34,7 @@ export struct EffortByDateData {
     dev: int,
     project: int,
     effort: int,
-    date: int,
+    week: int,
     persons: [string],
 }
 
@@ -66,14 +52,21 @@ export struct EffortByDevData {
 export struct EffortByPrjData {
     project: int,
     text: string,
-    start: int,
+    start_week: int,
+    end_week:int,
     visible: bool,
     efforts: [EffortByDevData]
 }
 
 export struct EffortsData {
+    worker_names: [string],
     week_off: [int],
     projects: [EffortByPrjData]
+}
+
+export struct DayData  {
+    week: int,
+    text: string,
 }
 
 export global PjmCallback {
@@ -87,6 +80,8 @@ export global PjmCallback {
     in property <string> last-search;
     in property <bool> show_modal;
     in property <bool> changed;
+    in property <int> this_week;
+    in property <length> this_week_width: 5px;
 }
 
 component InternalText inherits Text {
@@ -167,7 +162,7 @@ export component Cell-RW inherits Rectangle {
 
         Rectangle {
             visible: !editing;
-            border-color: fs.has-focus ? Colors.yellow : Colors.transparent;
+            border-color: fs.has-focus ? Colors.orangered : Colors.transparent;
             border-width: parent.visible ? 1px : 0px;
             TouchArea {
                 double-clicked => {
@@ -253,33 +248,33 @@ export component EffortByDataGui inherits Rectangle {
                 return Palette.color-scheme == ColorScheme.dark ? Colors.white : Colors.black;
             }
             if effort.total < effort.effort * 10 / 100 {
-                return #6fff00;
+                return #018730;
             }
             if effort.total < effort.effort * 20 / 100 {
-                return #99ff00;
+                return #558d00;
             }
             if effort.total < effort.effort * 30 / 100 {
-                return #ccff00;
+                return #6d8800;
             }
             if effort.total < effort.effort * 40 / 100 {
-                return #ffff00;
+                return #888800;
             }
             if effort.total < effort.effort * 50 / 100 {
-                return #ffcc00;
+                return #a88700;
             }
             if effort.total < effort.effort * 60 / 100 {
-                return #ffaa00;
+                return #b57a00;
             }
             if effort.total < effort.effort * 70 / 100 {
-                return #ff8800;
+                return #cf6f00;
             }
             if effort.total < effort.effort * 80 / 100 {
-                return #ff5500;
+                return #c54300;
             }
             if effort.total < effort.effort * 90 / 100 {
-                return #ff3300;
+                return #d52c00;
             }
-            return #ff0000;
+            return #d10100;
         }
 
         cell := Cell-RO {
@@ -316,14 +311,23 @@ export component EffortByDevGui inherits Rectangle {
             background: AppState.model[root.index].col;
         }
 
-        HorizontalBox {
+        HorizontalLayout {
             spacing: 0px;
             padding: 0px;
 
-            for data in datas.datas: EffortByDataGui {
-                num_visible: root.num_visible;
-                effort: data;
-                visible: datas.visible;
+            for data in datas.datas: Rectangle {
+                HorizontalLayout {
+                    Rectangle {
+                        background: data.week == PjmCallback.this_week ? #00ce3a : Colors.transparent;
+                        width: data.week == PjmCallback.this_week ? PjmCallback.this_week_width : 0px;
+                    }
+
+                    EffortByDataGui {
+                        num_visible: root.num_visible;
+                        effort: data;
+                        visible: datas.visible;
+                    }
+                }
             }
         }
 
