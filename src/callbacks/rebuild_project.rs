@@ -1,9 +1,19 @@
+//! Project rebuild utility for recalculating totals and remaining effort.
+
 use slint::{Model, VecModel};
 
-use crate::models::{DevId, ProjectId};
-use crate::models::effort_by_prj::EffortByPrjDataExt;
+use crate::models::{effort_by_prj::EffortByPrjDataExt, DevId, ProjectId};
 use crate::EffortByPrjData;
 
+/// Rebuilds a specific development category within a project.
+///
+/// This function recalculates the totals and remaining effort for a specific
+/// development category (dev_id) within a project (project_id).
+///
+/// # Arguments
+/// * `model` - Reference to the VecModel containing all projects
+/// * `project_id` - ID of the project to rebuild
+/// * `dev_id` - ID of the development category to rebuild
 pub fn rebuild_project(
     model: &VecModel<EffortByPrjData>,
     project_id: ProjectId,
