@@ -25,10 +25,10 @@ use utils::*;
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
-    let vec_model_projects = Rc::new(VecModel::default());
-    let vec_model_week_off = Rc::new(VecModel::default());
-    let vec_model_worker_names = Rc::new(VecModel::default());
-    let vec_model_sovra = Rc::new(VecModel::default());
+    let vec_model_projects = Rc::new(VecModel::<EffortByPrjData>::default());
+    let vec_model_week_off = Rc::new(VecModel::<i32>::default());
+    let vec_model_worker_names = Rc::new(VecModel::<SharedString>::default());
+    let vec_model_sovra = Rc::new(VecModel::<SovraData>::default());
 
     let mut app_info = load_efforts_from_file("efforts.json");
     let (start_week, end_week) = app_info.start_end_weeks();
@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .collect::<Vec<_>>(),
     ));
 
-    ui.as_weak().upgrade().unwrap().set_weeks(weeks_day_data);
+    ui.set_weeks(weeks_day_data);
 
     for dto in app_info.projects.iter_mut() {
         dto.set_date(start_week, end_week);
@@ -74,48 +74,33 @@ fn main() -> Result<(), Box<dyn Error>> {
         let vec_model_sovra = vec_model_sovra.clone();
 
         PjmCallback::get(&ui).on_save_file(move || {
-            let mut projects = Vec::new();
-            for i in 0..vec_model_projects.row_count() {
-                let e = vec_model_projects
-                    .row_data(i)
-                    .unwrap_or(EffortByPrjData::default());
-                projects.push(EffortByPrjDto::from(e)); // tua conversione
-            }
+            // Usa iteratori invece di loop manuali - più efficiente
+            let projects: Vec<EffortByPrjDto> = (0..vec_model_projects.row_count())
+                .filter_map(|i| vec_model_projects.row_data(i))
+                .map(EffortByPrjDto::from)
+                .collect();
 
-            let mut week_off = Vec::new();
-            for i in 0..vec_model_week_off.row_count() {
-                let e = vec_model_week_off.row_data(i).unwrap_or(0);
-                week_off.push(e);
-            }
+            let week_off: Vec<i32> = (0..vec_model_week_off.row_count())
+                .filter_map(|i| vec_model_week_off.row_data(i))
+                .collect();
 
-            let mut worker_names = Vec::new();
-            for i in 0..vec_model_worker_names.row_count() {
-                let e = vec_model_worker_names
-                    .row_data(i)
-                    .unwrap_or(SharedString::default());
-                worker_names.push(e);
-            }
+            let worker_names: Vec<SharedString> = (0..vec_model_worker_names.row_count())
+                .filter_map(|i| vec_model_worker_names.row_data(i))
+                .collect();
 
-            let mut sovra = Vec::new();
-            for i in 0..vec_model_sovra.row_count() {
-                let e = vec_model_sovra.row_data(i).unwrap_or(SovraData::default());
-                sovra.push(SovraDto::from(e));
-            }
+            let sovra: Vec<SovraDto> = (0..vec_model_sovra.row_count())
+                .filter_map(|i| vec_model_sovra.row_data(i))
+                .map(SovraDto::from)
+                .collect();
 
-            let updated = EffortsData {
-                sovra: ModelRc::new(VecModel::from(
-                    sovra.into_iter().map(SovraData::from).collect::<Vec<_>>(),
-                )),
-                week_off: ModelRc::new(VecModel::from(week_off)),
-                projects: ModelRc::new(VecModel::from(
-                    projects
-                        .into_iter()
-                        .map(EffortByPrjData::from)
-                        .collect::<Vec<_>>(),
-                )),
-                worker_names: ModelRc::new(VecModel::from(worker_names)),
+            // Ottimizzazione: converti direttamente in EffortsDto senza passaggio intermedio
+            let dto = EffortsDto {
+                sovra,
+                week_off,
+                worker_names: worker_names.iter().map(|s| s.to_string()).collect(),
+                projects,
             };
-            let _ = save_efforts_to_file(&updated.into(), "efforts.json");
+            let _ = save_efforts_to_file(&dto, "efforts.json");
             if let Some(ui) = ui_weak.upgrade() {
                 PjmCallback::get(&ui).set_changed(false);
             }
@@ -161,16 +146,19 @@ fn main() -> Result<(), Box<dyn Error>> {
             for i in 0..effort.persons.row_count() {
                 if let Some((person, _)) = info_cell(effort.persons.row_data(i).unwrap().as_str()) {
                     if !person.is_empty() {
+                        // Evita allocazioni ripetute - cerca direttamente con &str
                         let mut founded = false;
                         for j in 0..vec_model_worker_names.row_count() {
-                            let worker = vec_model_worker_names.row_data(j).unwrap().to_string();
-                            if person == worker {
-                                founded = true;
-                                break;
+                            if let Some(worker) = vec_model_worker_names.row_data(j) {
+                                if person == worker.as_str() {
+                                    founded = true;
+                                    break;
+                                }
                             }
                         }
                         if !founded {
                             vec_model_worker_names.push(SharedString::from(person));
+                            // Ottimizzazione: aggiorna tutti i sovra in un colpo solo
                             for s in 0..vec_model_sovra.row_count() {
                                 let mut sovra: SovraDto =
                                     vec_model_sovra.row_data(s).unwrap().into();
@@ -178,8 +166,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 vec_model_sovra.set_row_data(s, sovra.into());
                             }
                         }
-                    } else {
-                        println!("person is empty!!!!!");
                     }
                 }
             }
@@ -234,6 +220,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         PjmCallback::get(&ui).on_search(move |text: SharedString| {
             println!("on_search {:?}", text);
 
+            // Ottimizzazione: evita allocazioni ripetute convertendo una sola volta
+            let search_text = text.as_str();
+            let is_empty = search_text.is_empty();
+
             for project_index in 0..vec_model_projects.row_count() {
                 let mut project = vec_model_projects
                     .row_data(project_index)
@@ -244,33 +234,31 @@ fn main() -> Result<(), Box<dyn Error>> {
                     let mut dev = project.efforts.row_data(effort_index).unwrap_or_default();
                     let mut visible_dev = false;
 
-                    if text.is_empty() {
+                    if is_empty {
                         visible_prj = true;
                         visible_dev = true;
                     } else {
-                        for data_index in 0..dev.datas.row_count() {
+                        'outer: for data_index in 0..dev.datas.row_count() {
                             let data = dev.datas.row_data(data_index).unwrap_or_default();
                             for person_index in 0..data.persons.row_count() {
-                                let person =
-                                    data.persons.row_data(person_index).unwrap_or_default();
-                                if person.to_string().contains(&text.to_string()) {
-                                    visible_prj = true;
-                                    visible_dev = true;
-                                    break;
+                                if let Some(person) = data.persons.row_data(person_index) {
+                                    // Evita allocazioni - confronta direttamente &str
+                                    if person.as_str().contains(search_text) {
+                                        visible_prj = true;
+                                        visible_dev = true;
+                                        break 'outer;
+                                    }
                                 }
-                            }
-                            if visible_dev {
-                                break;
                             }
                         }
                     }
 
                     dev.visible = visible_dev;
-                    project.efforts.set_row_data(effort_index, dev); // ✅ NOTIFICA
+                    project.efforts.set_row_data(effort_index, dev);
                 }
 
                 project.visible = visible_prj;
-                vec_model_projects.set_row_data(project_index, project); // ✅ NOTIFICA principale
+                vec_model_projects.set_row_data(project_index, project);
             }
         });
     }

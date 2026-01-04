@@ -15,16 +15,16 @@ pub struct EffortsDto {
 impl Default for EffortsDto {
     fn default() -> Self {
         let (_, start_week, end_week) = crate::date_utils::get_default_weeks();
-        let mut start_week = start_week;
-        let mut sovra = Vec::new();
 
-        while start_week < end_week {
-            sovra.push(SovraDto {
+        // Usa iteratore per efficienza e pre-alloca con capacità esatta
+        let num_weeks = ((end_week - start_week) / 7) as usize;
+        let sovra: Vec<SovraDto> = (0..num_weeks)
+            .map(|i| SovraDto {
                 value: vec![],
-                week: start_week,
-            });
-            start_week += 7;
-        }
+                week: start_week + (i as i32 * 7),
+            })
+            .collect();
+
         Self {
             sovra,
             week_off: vec![],

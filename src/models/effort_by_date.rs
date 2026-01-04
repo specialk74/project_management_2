@@ -38,8 +38,9 @@ impl From<EffortByDateDto> for crate::EffortByDateData {
             project: d.project,
             effort: d.effort,
             week: d.week,
+            // Ottimizzazione: evita Vec intermedio
             persons: ModelRc::new(slint::VecModel::from(
-                d.persons.iter().map(SharedString::from).collect::<Vec<_>>(),
+                d.persons.into_iter().map(SharedString::from).collect::<Vec<_>>(),
             )),
         }
     }
@@ -68,11 +69,8 @@ impl EffortByDateDataExt for crate::EffortByDateData {
     fn get_sovra(&self, sovra: &mut HashMap<String, i32>) {
         for item in self.persons.iter() {
             if let Some((person, value)) = crate::utils::info_cell(item.as_str()) {
-                if let Some(old_value) = sovra.get(person) {
-                    sovra.insert(String::from(person), old_value + value);
-                } else {
-                    sovra.insert(String::from(person), value);
-                }
+                // Usa entry API per evitare doppia ricerca in HashMap
+                *sovra.entry(person.to_string()).or_insert(0) += value;
             }
         }
     }
