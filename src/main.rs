@@ -6,7 +6,6 @@ slint::include_modules!();
 mod models;
 mod utils;
 mod date_utils;
-mod conversions;
 mod file_io;
 mod callbacks;
 
@@ -16,6 +15,7 @@ use std::collections::HashMap;
 use std::{error::Error, rc::Rc};
 
 use models::*;
+use models::effort_by_date::EffortByDateDataExt;
 use date_utils::*;
 use file_io::*;
 use callbacks::*;

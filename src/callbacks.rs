@@ -1,6 +1,7 @@
 use slint::{Model, VecModel};
 
 use crate::models::{DevId, ProjectId};
+use crate::models::effort_by_prj::EffortByPrjDataExt;
 use crate::EffortByPrjData;
 
 pub fn rebuild_project(
