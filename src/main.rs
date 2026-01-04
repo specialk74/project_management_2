@@ -102,10 +102,12 @@ impl EffortByDateDto {
         }
         total
     }
+}
 
+impl EffortByDateData {
     fn get_sovra(&self, sovra: &mut HashMap<String, i32>) {
         for item in self.persons.iter() {
-            if let Some((person, value)) = info_cell(item) {
+            if let Some((person, value)) = info_cell(item.as_str()) {
                 if let Some(old_value) = sovra.get(person) {
                     sovra.insert(String::from(person), old_value + value);
                 } else {
@@ -281,7 +283,32 @@ impl EffortByPrjData {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+struct SovraDto {
+    value: Vec<i32>,
+    week: i32,
+}
+
+impl From<SovraDto> for SovraData {
+    fn from(d: SovraDto) -> Self {
+        Self {
+            value: ModelRc::new(slint::VecModel::from(d.value)),
+            week: d.week,
+        }
+    }
+}
+
+impl From<SovraData> for SovraDto {
+    fn from(d: SovraData) -> Self {
+        Self {
+            value: d.value.iter().collect(),
+            week: d.week,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct EffortsDto {
+    sovra: Vec<SovraDto>,
     week_off: Vec<i32>,
     worker_names: Vec<String>,
     projects: Vec<EffortByPrjDto>,
@@ -289,7 +316,19 @@ struct EffortsDto {
 
 impl Default for EffortsDto {
     fn default() -> Self {
+        let (_, start_week, end_week) = get_default_weeks();
+        let mut start_week = start_week;
+        let mut sovra = Vec::new();
+
+        while start_week < end_week {
+            sovra.push(SovraDto {
+                value: vec![],
+                week: start_week,
+            });
+            start_week += 7;
+        }
         Self {
+            sovra,
             week_off: vec![],
             worker_names: vec![],
             projects: vec![EffortByPrjDto::new(0)],
@@ -301,6 +340,9 @@ impl From<EffortsDto> for EffortsData {
     fn from(d: EffortsDto) -> Self {
         Self {
             week_off: ModelRc::new(slint::VecModel::from(d.week_off)),
+            sovra: ModelRc::new(slint::VecModel::from(
+                d.sovra.into_iter().map(SovraData::from).collect::<Vec<_>>(),
+            )),
             worker_names: ModelRc::new(slint::VecModel::from(
                 d.worker_names
                     .iter()
@@ -320,6 +362,7 @@ impl From<EffortsDto> for EffortsData {
 impl From<EffortsData> for EffortsDto {
     fn from(d: EffortsData) -> Self {
         Self {
+            sovra: d.sovra.iter().map(SovraDto::from).collect(),
             week_off: d.week_off.iter().collect(),
             worker_names: d.worker_names.iter().map(|s| s.to_string()).collect(),
             projects: d.projects.iter().map(EffortByPrjDto::from).collect(),
@@ -515,12 +558,18 @@ fn days_to_local(days: i32) -> NaiveDate {
     NaiveDate::from_epoch_days(days).unwrap()
 }
 
+fn get_default_weeks() -> (i64, i32, i32) {
+    let num_weeks = 52;
+    let start_date = local_to_days(&primo_giorno_settimana_corrente(&Utc::now().date_naive()));
+    let end_date = local_to_days(&primo_giorno_settimana_corrente(
+        &(Utc::now().date_naive() + chrono::Duration::weeks(num_weeks)),
+    ));
+    (num_weeks, start_date, end_date)
+}
+
 impl EffortByPrjDto {
     fn new(project: i32) -> Self {
-        let num_weeks = 52;
-        let start_date = local_to_days(&Utc::now().date_naive());
-        let end_date =
-            local_to_days(&(Utc::now().date_naive() + chrono::Duration::weeks(num_weeks)));
+        let (num_weeks, start_date, end_date) = get_default_weeks();
         EffortByPrjDto {
             project,
             start_week: start_date,
@@ -612,9 +661,10 @@ fn rebuild_project(model: &VecModel<EffortByPrjData>, project_id: ProjectId, dev
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
 
-    let vec_model_projects = Rc::new(slint::VecModel::default());
-    let vec_model_week_off = Rc::new(slint::VecModel::default());
-    let vec_model_worker_names = Rc::new(slint::VecModel::default());
+    let vec_model_projects = Rc::new(VecModel::default());
+    let vec_model_week_off = Rc::new(VecModel::default());
+    let vec_model_worker_names = Rc::new(VecModel::default());
+    let vec_model_sovra = Rc::new(VecModel::default());
 
     let mut app_info = load_efforts_from_file("efforts.json");
     let (start_week, end_week) = app_info.start_end_weeks();
@@ -622,7 +672,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("start_week: {} - end_week: {}", start_week, end_week);
 
     let weeks_day_dto = weeks_list(&days_to_local(start_week), &days_to_local(end_week));
-    let weeks_day_data = ModelRc::new(slint::VecModel::from(
+    let weeks_day_data = ModelRc::new(VecModel::from(
         weeks_day_dto
             .into_iter()
             .map(DayData::from)
@@ -643,6 +693,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         vec_model_worker_names.push(person.into());
     }
 
+    for sovra in app_info.sovra {
+        vec_model_sovra.push(sovra.into());
+    }
+
     let this_week = local_to_days(&primo_giorno_settimana_corrente(&Utc::now().date_naive()));
     PjmCallback::get(&ui).set_this_week(this_week);
     println!("this_week: {}", this_week);
@@ -653,6 +707,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let vec_model_projects = vec_model_projects.clone();
         let vec_model_week_off = vec_model_week_off.clone();
         let vec_model_worker_names = vec_model_worker_names.clone();
+        let vec_model_sovra = vec_model_sovra.clone();
 
         PjmCallback::get(&ui).on_save_file(move || {
             let mut projects = Vec::new();
@@ -677,7 +732,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                 worker_names.push(e);
             }
 
+            let mut sovra = Vec::new();
+            for i in 0..vec_model_sovra.row_count() {
+                let e = vec_model_sovra.row_data(i).unwrap_or(SovraData::default());
+                sovra.push(SovraDto::from(e));
+            }
+
             let updated = EffortsData {
+                sovra: ModelRc::new(VecModel::from(
+                    sovra.into_iter().map(SovraData::from).collect::<Vec<_>>(),
+                )),
                 week_off: ModelRc::new(VecModel::from(week_off)),
                 projects: ModelRc::new(VecModel::from(
                     projects
@@ -728,6 +792,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_weak = ui.as_weak();
         let vec_model_projects = vec_model_projects.clone();
         let vec_model_worker_names = vec_model_worker_names.clone();
+        let vec_model_sovra = vec_model_sovra.clone();
         PjmCallback::get(&ui).on_changed_effort(move |effort: EffortByDateData| {
             for i in 0..effort.persons.row_count() {
                 if let Some((person, _)) = info_cell(effort.persons.row_data(i).unwrap().as_str()) {
@@ -742,7 +807,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                         }
                         if !founded {
                             vec_model_worker_names.push(SharedString::from(person));
+                            for s in 0..vec_model_sovra.row_count() {
+                                let mut sovra: SovraDto =
+                                    vec_model_sovra.row_data(s).unwrap().into();
+                                sovra.value.push(0);
+                                vec_model_sovra.set_row_data(s, sovra.into());
+                            }
                         }
+                    } else {
+                        println!("person is empty!!!!!");
                     }
                 }
             }
@@ -752,6 +825,39 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ProjectId(effort.project as usize),
                 DevId(effort.dev as usize),
             );
+
+            let mut sovra_hash = HashMap::new();
+            for p in 0..vec_model_projects.row_count() {
+                let effort_by_prj_data = vec_model_projects.row_data(p).unwrap();
+                for d in 0..effort_by_prj_data.efforts.row_count() {
+                    let effort_by_dev_data = effort_by_prj_data.efforts.row_data(d).unwrap();
+                    for data in 0..effort_by_dev_data.datas.row_count() {
+                        let effort_by_date_data = effort_by_dev_data.datas.row_data(data).unwrap();
+                        if effort_by_date_data.week == effort.week {
+                            effort_by_date_data.get_sovra(&mut sovra_hash);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            println!("sovra: {:?}", sovra_hash);
+
+            for s in 0..vec_model_sovra.row_count() {
+                let mut sovra: SovraDto = vec_model_sovra.row_data(s).unwrap().into();
+                if sovra.week == effort.week {
+                    for n in 0..vec_model_worker_names.row_count() {
+                        let name = vec_model_worker_names.row_data(n).unwrap().to_string();
+                        if let Some(val) = sovra.value.get_mut(n) {
+                            *val = *sovra_hash.get(&name).unwrap_or(&0);
+                        }
+                    }
+
+                    vec_model_sovra.set_row_data(s, sovra.into());
+                    break;
+                }
+            }
+
             if let Some(ui) = ui_weak.upgrade() {
                 PjmCallback::get(&ui).set_changed(true);
             }
@@ -849,6 +955,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     ui.set_efforts(EffortsData {
+        sovra: vec_model_sovra.into(),
         week_off: vec_model_week_off.into(),
         projects: vec_model_projects.into(),
         worker_names: vec_model_worker_names.into(),

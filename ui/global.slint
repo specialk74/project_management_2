@@ -58,9 +58,15 @@ export struct EffortByPrjData {
     efforts: [EffortByDevData]
 }
 
+export struct SovraData {
+    value: [int],
+    week: int,
+}
+
 export struct EffortsData {
     worker_names: [string],
     week_off: [int],
+    sovra: [SovraData],
     projects: [EffortByPrjData]
 }
 

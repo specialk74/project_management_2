@@ -11,7 +11,6 @@ import { StyleMetrics, HorizontalBox } from "std-widgets.slint";
 
 export component RightFooter inherits Rectangle {
     in property <EffortsData> efforts;
-    in property <[DayData]> weeks;
     in-out property <length> viewport-x;
 
     Flickable {
@@ -19,7 +18,7 @@ export component RightFooter inherits Rectangle {
         HorizontalLayout {
             padding: 0px;
             spacing: 0px;
-            for data in weeks: Rectangle {
+            for data in root.efforts.sovra: Rectangle {
                 HorizontalLayout {
                     Rectangle {
                         background: data.week == PjmCallback.this_week ? #00ce3a : Colors.transparent;
@@ -27,12 +26,12 @@ export component RightFooter inherits Rectangle {
                     }
 
                     VerticalLayout {
-                        for name[index] in efforts.worker_names: Rectangle {
+                        for value[index] in data.value: Rectangle {
                             background: index.mod(2) == 0 ? Colors.gray : Colors.transparent;
                             width: Styles.width;
                             height: Styles.height;
                             Text {
-                                text: 0;
+                                text: value;
                             }
                         }
                     }
