@@ -31,6 +31,8 @@ export component RightFooter inherits Rectangle {
                             width: Styles.width;
                             height: Styles.height;
                             Text {
+                                font-weight: value > 80 ? 800 : 200;
+                                color: value > 80 ? Colors.red : Colors.black;
                                 text: value;
                             }
                         }

@@ -148,11 +148,12 @@ export component Cell-RW inherits Rectangle {
     in-out property <string> text;
     callback double_clicked(string);
     property <bool> editing: false;
+    property <bool> has-focus: fs.has-focus;
     height: self.visible ? Styles.height : 0px;
     width: Styles.width;
 
     fs := FocusScope {
-        focus-on-click: true;
+        //focus-on-click: true;
         focus-on-tab-navigation: true;
         le := LineEdit {
             visible: editing;
@@ -171,13 +172,18 @@ export component Cell-RW inherits Rectangle {
             border-color: fs.has-focus ? Colors.orangered : Colors.transparent;
             border-width: parent.visible ? 1px : 0px;
             TouchArea {
-                double-clicked => {
-                    root.editing = true;
-                    le.focus();
-                }
+                // double-clicked => {
+                //     root.editing = true;
+                //     le.focus();
+                // }
                 clicked => {
                     fs.focus();
                 }
+                // pointer-event(event) => {
+                //     if (event.button == PointerEventButton.other && root.has-focus == false) {
+                //         fs.focus();
+                //     }
+                // }
             }
 
             Cell-RO {
@@ -186,6 +192,7 @@ export component Cell-RW inherits Rectangle {
         }
 
         key-pressed(event) => {
+            //debug(event);
             if (event.modifiers.control) {
                 if (event.text == "C" || event.text == "c") {
                     PjmCallback.testo-copiato = root.text;
@@ -217,6 +224,10 @@ export component Cell-RW inherits Rectangle {
             if (event.text == Key.Return) {
                 root.editing = true;
                 le.focus();
+            }
+            if (event.text == Key.Delete || event.text == Key.Backspace) {
+                root.text = "";
+                root.double_clicked(root.text);
             }
             if (event.text == Key.Tab) {
                 reject
