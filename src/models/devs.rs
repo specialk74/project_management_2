@@ -1,6 +1,11 @@
+//! Development categories and identifiers.
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+/// Development categories for effort tracking.
+///
+/// Represents different teams or roles in the project.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Devs {
     Mcsw = 0,
     Sms = 1,
@@ -46,8 +51,10 @@ impl From<i32> for Devs {
     }
 }
 
-#[derive(PartialEq, Debug)]
+/// Project identifier wrapper for type safety.
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct ProjectId(pub usize);
 
-#[derive(PartialEq, Debug)]
+/// Development category identifier wrapper for type safety.
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct DevId(pub usize);

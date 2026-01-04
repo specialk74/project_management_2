@@ -1,25 +1,15 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-slint::include_modules!();
-
-mod models;
-mod utils;
-mod date_utils;
-mod file_io;
-mod callbacks;
+use project_app::*;
 
 use chrono::Utc;
 use slint::{Model, ModelRc, SharedString, VecModel};
 use std::collections::HashMap;
 use std::{error::Error, rc::Rc};
 
-use models::*;
-use models::effort_by_date::EffortByDateDataExt;
-use date_utils::*;
-use file_io::*;
-use callbacks::*;
-use utils::*;
+use project_app::{models::*, date_utils::*, file_io::*, callbacks::*, utils::*};
+use project_app::models::effort_by_date::EffortByDateDataExt;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
