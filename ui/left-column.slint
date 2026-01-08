@@ -1,4 +1,15 @@
-import { LineEdit, HorizontalBox, TextEdit } from "std-widgets.slint";
+import {
+    Button,
+    VerticalBox,
+    ListView,
+    CheckBox,
+    LineEdit,
+    Spinner,
+    TextEdit,
+    HorizontalBox,
+    ProgressIndicator,
+} from "std-widgets.slint";
+
 import {
     AppState,
     EffortByPrjData,
@@ -14,11 +25,55 @@ component Separatore inherits Rectangle {
     background: bgcolor;
 }
 
+component Devmenu inherits Window {
+    in-out property <int> project;
+    in-out property <int> dev;
+
+    public function show(project: int, dev: int) {
+        popup.show();
+        root.project = project;
+        root.dev = dev;
+    }
+    popup := PopupWindow {
+        VerticalLayout {
+            Button {
+                text: "Add Row";
+                clicked => {
+                    PjmCallback.add_row(root.project, root.dev);
+                    popup.close();
+                }
+            }
+
+            Button {
+                text: "Del Row";
+                clicked => {
+                    popup.close();
+                }
+            }
+
+            Button {
+                text: "Hide Dev";
+                clicked => {
+                    popup.close();
+                }
+            }
+        }
+
+        x: 20px;
+        y: 20px;
+        close-policy: close-on-click-outside;
+    }
+}
+
 export component LeftColumn inherits Rectangle {
     in property <EffortsData> efforts;
     in-out property <length> viewport_y;
 
     width: 60px * 4;
+
+    popup := Devmenu {
+        visible: false;
+    }
 
     Flickable {
         viewport-y <=> root.viewport_y;
@@ -40,6 +95,7 @@ export component LeftColumn inherits Rectangle {
 
                             VerticalLayout {
                                 for data[index] in item.efforts: Rectangle {
+
                                     VerticalLayout {
                                         Separatore {
                                             visible: data.visible;
@@ -51,7 +107,7 @@ export component LeftColumn inherits Rectangle {
                                             height: data.visible == false ? 0px : Styles.height * (data.max + 1);
 
                                             HorizontalLayout {
-                                                Rectangle {
+                                                cell := Rectangle {
                                                     background: AppState.model[index].col;
                                                     width: Styles.width - 50px;
                                                     clip: true;
@@ -71,6 +127,18 @@ export component LeftColumn inherits Rectangle {
                                                             double-clicked => {
                                                                 debug("add_row");
                                                                 PjmCallback.add_row(item.project, data.dev);
+                                                            }
+
+                                                            pointer-event(event) => {
+                                                                if event.button == PointerEventButton.right {
+                                                                    if event.kind == PointerEventKind.down {
+                                                                        popup.x = cell.absolute-position.x;
+                                                                        popup.y = cell.absolute-position.y;
+                                                                        popup.visible = true;
+                                                                        popup.show(item.project, data.dev);
+                                                                    } else {
+                                                                    }
+                                                                }
                                                             }
                                                         }
                                                     }
