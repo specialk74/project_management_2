@@ -36,25 +36,44 @@ component Devmenu inherits Window {
     }
     popup := PopupWindow {
         VerticalLayout {
-            Button {
-                text: "Add Row";
-                clicked => {
-                    PjmCallback.add_row(root.project, root.dev);
-                    popup.close();
+            Rectangle {
+                background: Colors.orange;
+                Text {
+                    text: "Add Row";
+                }
+
+                TouchArea {
+                    clicked => {
+                        PjmCallback.add_row(root.project, root.dev);
+                        popup.close();
+                    }
                 }
             }
 
-            Button {
-                text: "Del Row";
-                clicked => {
-                    popup.close();
+            Rectangle {
+                background: Colors.green;
+                Text {
+                    text: "Del Row";
+                }
+
+                TouchArea {
+                    clicked => {
+                        PjmCallback.del_row(root.project, root.dev);
+                        popup.close();
+                    }
                 }
             }
 
-            Button {
-                text: "Hide Dev";
-                clicked => {
-                    popup.close();
+            Rectangle {
+                background: Colors.violet;
+                Text {
+                    text: "Hide Dev";
+                }
+
+                TouchArea {
+                    clicked => {
+                        popup.close();
+                    }
                 }
             }
         }

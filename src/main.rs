@@ -7,8 +7,7 @@ use chrono::Utc;
 use slint::{ModelRc, SharedString, VecModel};
 use std::{error::Error, rc::Rc};
 
-use project_app::{date_utils::*, file_io::*, callbacks::*};
-
+use project_app::{callbacks::*, date_utils::*, file_io::*};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
@@ -75,6 +74,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     register_on_search(&ui, vec_model_projects.clone());
 
+    register_on_del_row(&ui, vec_model_projects.clone());
     register_on_add_row(&ui, vec_model_projects.clone());
 
     ui.set_efforts(EffortsData {
