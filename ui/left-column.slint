@@ -38,6 +38,7 @@ component Devmenu inherits Window {
     popup := PopupWindow {
         VerticalLayout {
             Rectangle {
+                visible: !root.visible;
                 background: Colors.grey;
                 Text {
                     text: "Add Row";
@@ -52,6 +53,7 @@ component Devmenu inherits Window {
             }
 
             Rectangle {
+                visible: !root.visible;
                 background: Colors.grey;
                 Text {
                     text: "Del Row";
@@ -68,7 +70,7 @@ component Devmenu inherits Window {
             Rectangle {
                 background: Colors.grey;
                 Text {
-                    text: "Hide Dev";
+                    text: root.visible ? "Show Dev" : "Hide Dev";
                 }
 
                 TouchArea {
@@ -118,17 +120,30 @@ export component LeftColumn inherits Rectangle {
                                 for data[index] in item.efforts: Rectangle {
 
                                     VerticalLayout {
-                                        Separatore {
-                                            visible: data.visible;
+                                        cell := Separatore {
                                             bgcolor: AppState.model[index].col;
-                                            height: data.visible == false ? 0px : 5px;
+                                            height: 5px;
+
+                                            TouchArea {
+                                                pointer-event(event) => {
+                                                    if event.button == PointerEventButton.right {
+                                                        if event.kind == PointerEventKind.down {
+                                                            popup.x = cell.absolute-position.x;
+                                                            popup.y = cell.absolute-position.y;
+                                                            popup.visible = true;
+                                                            popup.show(item.project, data.dev, data.visible == false);
+                                                        } else {
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
 
                                         Rectangle {
                                             height: data.visible == false ? 0px : Styles.height * (data.max + 1);
 
                                             HorizontalLayout {
-                                                cell := Rectangle {
+                                                Rectangle {
                                                     background: AppState.model[index].col;
                                                     width: Styles.width - 50px;
                                                     clip: true;
@@ -156,7 +171,7 @@ export component LeftColumn inherits Rectangle {
                                                                         popup.x = cell.absolute-position.x;
                                                                         popup.y = cell.absolute-position.y;
                                                                         popup.visible = true;
-                                                                        popup.show(item.project, data.dev, data.visible == false);
+                                                                        popup.show(item.project, data.dev, !data.visible);
                                                                     } else {
                                                                     }
                                                                 }
@@ -203,9 +218,22 @@ export component LeftColumn inherits Rectangle {
                                         }
 
                                         Separatore {
-                                            height: data.visible == false ? 0px : 5px;
-                                            visible: data.visible;
+                                            height: 5px;
                                             bgcolor: AppState.model[index].col;
+
+                                            TouchArea {
+                                                pointer-event(event) => {
+                                                    if event.button == PointerEventButton.right {
+                                                        if event.kind == PointerEventKind.down {
+                                                            popup.x = cell.absolute-position.x;
+                                                            popup.y = cell.absolute-position.y;
+                                                            popup.visible = true;
+                                                            popup.show(item.project, data.dev, data.visible == false);
+                                                        } else {
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }

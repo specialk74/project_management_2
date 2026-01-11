@@ -323,16 +323,16 @@ export component EffortByDevGui inherits Rectangle {
     in property <int> num_visible;
     in property <EffortByDevData> datas;
     in property <int> index;
-    visible: datas.visible;
     VerticalLayout {
         Rectangle {
-            height: datas.visible ? 5px : 0px;
+            height: 5px;
             background: AppState.model[root.index].col;
         }
 
         HorizontalLayout {
             spacing: 0px;
             padding: 0px;
+            visible: datas.visible;
 
             for data in datas.datas: Rectangle {
                 HorizontalLayout {
@@ -351,7 +351,7 @@ export component EffortByDevGui inherits Rectangle {
         }
 
         Rectangle {
-            height: datas.visible ? 5px : 0px;
+            height: 5px;
             background: AppState.model[root.index].col;
         }
     }
