@@ -1,6 +1,6 @@
 //! Callback handler for adding worker rows.
 
-use slint::{Global, Model, ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, VecModel};
 use std::rc::Rc;
 
 use crate::{AppWindow, EffortByPrjData, PjmCallback};
@@ -14,6 +14,8 @@ use crate::{AppWindow, EffortByPrjData, PjmCallback};
 /// * `ui` - Reference to the main application window
 /// * `vec_model_projects` - Project data model containing all projects
 pub fn register_on_add_row(ui: &AppWindow, vec_model_projects: Rc<VecModel<EffortByPrjData>>) {
+    let ui_weak = ui.as_weak();
+
     PjmCallback::get(ui).on_add_row(move |project_id: i32, dev_id: i32| {
         println!("on_add_row - project: {} - dev: {}", project_id, dev_id);
 
@@ -48,7 +50,12 @@ pub fn register_on_add_row(ui: &AppWindow, vec_model_projects: Rc<VecModel<Effor
                 }
                 dev.max = max as i32;
                 project.efforts.set_row_data(effort_index, dev);
+                break;
             }
+        }
+
+        if let Some(ui) = ui_weak.upgrade() {
+            PjmCallback::get(&ui).set_changed(true);
         }
     });
 }

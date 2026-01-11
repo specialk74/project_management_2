@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     register_on_del_row(&ui, vec_model_projects.clone());
     register_on_add_row(&ui, vec_model_projects.clone());
+    register_on_hide_dev(&ui, vec_model_projects.clone());
 
     ui.set_efforts(EffortsData {
         sovra: vec_model_sovra.into(),

@@ -13,11 +13,14 @@ use crate::{AppWindow, EffortByPrjData, PjmCallback};
 /// # Arguments
 /// * `ui` - Reference to the main application window
 /// * `vec_model_projects` - Project data model containing all projects
-pub fn register_on_del_row(ui: &AppWindow, vec_model_projects: Rc<VecModel<EffortByPrjData>>) {
+pub fn register_on_hide_dev(ui: &AppWindow, vec_model_projects: Rc<VecModel<EffortByPrjData>>) {
     let ui_weak = ui.as_weak();
 
-    PjmCallback::get(ui).on_del_row(move |project_id: i32, dev_id: i32| {
-        println!("on_del_row - project: {} - dev: {}", project_id, dev_id);
+    PjmCallback::get(ui).on_hide_dev(move |project_id: i32, dev_id: i32, visible: bool| {
+        println!(
+            "on_hide_dev - project: {} - dev: {} - visible: {}",
+            project_id, dev_id, visible
+        );
 
         for project_index in 0..vec_model_projects.row_count() {
             let project = vec_model_projects
@@ -34,7 +37,6 @@ pub fn register_on_del_row(ui: &AppWindow, vec_model_projects: Rc<VecModel<Effor
                 }
 
                 for person_index in 0..dev.max {
-                    let mut empty_cell = true;
                     for data_index in 0..dev.datas.row_count() {
                         let data = dev.datas.row_data(data_index).unwrap_or_default();
                         let persons_model: ModelRc<SharedString> = data.persons;
@@ -42,40 +44,12 @@ pub fn register_on_del_row(ui: &AppWindow, vec_model_projects: Rc<VecModel<Effor
                             .row_data(person_index as usize)
                             .is_some_and(|x| !x.is_empty())
                         {
-                            empty_cell = false;
-                            break;
+                            return;
                         }
-                    }
-                    if empty_cell {
-                        for data_index in 0..dev.datas.row_count() {
-                            let data = dev.datas.row_data(data_index).unwrap_or_default();
-                            let persons_model: ModelRc<SharedString> = data.persons;
-                            let vec_model = persons_model
-                                .as_any()
-                                .downcast_ref::<VecModel<SharedString>>()
-                                .expect("Deve essere VecModel");
-
-                            vec_model.remove(person_index as usize);
-                        }
-                        break;
                     }
                 }
 
-                let mut max = 0;
-                for data_index in 0..dev.datas.row_count() {
-                    let data = dev.datas.row_data(data_index).unwrap_or_default();
-                    let persons_model: ModelRc<SharedString> = data.persons;
-
-                    let vec_model = persons_model
-                        .as_any()
-                        .downcast_ref::<VecModel<SharedString>>()
-                        .expect("Deve essere VecModel");
-
-                    if max < vec_model.row_count() {
-                        max = vec_model.row_count();
-                    }
-                }
-                dev.max = max as i32;
+                dev.visible = visible;
                 project.efforts.set_row_data(effort_index, dev);
                 break;
             }

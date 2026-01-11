@@ -29,15 +29,16 @@ component Devmenu inherits Window {
     in-out property <int> project;
     in-out property <int> dev;
 
-    public function show(project: int, dev: int) {
+    public function show(project: int, dev: int, visible: bool) {
         popup.show();
         root.project = project;
         root.dev = dev;
+        root.visible = visible;
     }
     popup := PopupWindow {
         VerticalLayout {
             Rectangle {
-                background: Colors.orange;
+                background: Colors.grey;
                 Text {
                     text: "Add Row";
                 }
@@ -51,7 +52,7 @@ component Devmenu inherits Window {
             }
 
             Rectangle {
-                background: Colors.green;
+                background: Colors.grey;
                 Text {
                     text: "Del Row";
                 }
@@ -65,13 +66,14 @@ component Devmenu inherits Window {
             }
 
             Rectangle {
-                background: Colors.violet;
+                background: Colors.grey;
                 Text {
                     text: "Hide Dev";
                 }
 
                 TouchArea {
                     clicked => {
+                        PjmCallback.hide_dev(root.project, root.dev, root.visible);
                         popup.close();
                     }
                 }
@@ -154,7 +156,7 @@ export component LeftColumn inherits Rectangle {
                                                                         popup.x = cell.absolute-position.x;
                                                                         popup.y = cell.absolute-position.y;
                                                                         popup.visible = true;
-                                                                        popup.show(item.project, data.dev);
+                                                                        popup.show(item.project, data.dev, data.visible == false);
                                                                     } else {
                                                                     }
                                                                 }
