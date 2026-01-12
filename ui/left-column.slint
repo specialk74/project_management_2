@@ -28,17 +28,18 @@ component Separatore inherits Rectangle {
 component Devmenu inherits Window {
     in-out property <int> project;
     in-out property <int> dev;
+    in-out property <bool> enable;
 
-    public function show(project: int, dev: int, visible: bool) {
+    public function show(project: int, dev: int, enable: bool) {
         popup.show();
         root.project = project;
         root.dev = dev;
-        root.visible = visible;
+        root.enable = enable;
     }
     popup := PopupWindow {
         VerticalLayout {
             Rectangle {
-                visible: !root.visible;
+                visible: !root.enable;
                 background: Colors.grey;
                 Text {
                     text: "Add Row";
@@ -53,7 +54,7 @@ component Devmenu inherits Window {
             }
 
             Rectangle {
-                visible: !root.visible;
+                visible: !root.enable;
                 background: Colors.grey;
                 Text {
                     text: "Del Row";
@@ -70,12 +71,12 @@ component Devmenu inherits Window {
             Rectangle {
                 background: Colors.grey;
                 Text {
-                    text: root.visible ? "Show Dev" : "Hide Dev";
+                    text: root.enable ? "Show Dev" : "Hide Dev";
                 }
 
                 TouchArea {
                     clicked => {
-                        PjmCallback.hide_dev(root.project, root.dev, root.visible);
+                        PjmCallback.hide_dev(root.project, root.dev, root.enable);
                         popup.close();
                     }
                 }
@@ -118,7 +119,8 @@ export component LeftColumn inherits Rectangle {
 
                             VerticalLayout {
                                 for data[index] in item.efforts: Rectangle {
-
+                                    in property <bool> visibility;
+                                    visibility: data.visible && data.enable;
                                     VerticalLayout {
                                         cell := Separatore {
                                             bgcolor: AppState.model[index].col;
@@ -131,7 +133,7 @@ export component LeftColumn inherits Rectangle {
                                                             popup.x = cell.absolute-position.x;
                                                             popup.y = cell.absolute-position.y;
                                                             popup.visible = true;
-                                                            popup.show(item.project, data.dev, data.visible == false);
+                                                            popup.show(item.project, data.dev, data.enable == false);
                                                         } else {
                                                         }
                                                     }
@@ -140,16 +142,16 @@ export component LeftColumn inherits Rectangle {
                                         }
 
                                         Rectangle {
-                                            height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                            height: visibility ? Styles.height * (data.max + 1) : 0px;
 
                                             HorizontalLayout {
                                                 Rectangle {
                                                     background: AppState.model[index].col;
                                                     width: Styles.width - 50px;
                                                     clip: true;
-                                                    height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                                    height: visibility ? Styles.height * (data.max + 1) : 0px;
                                                     Text {
-                                                        height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                                        height: visibility ? Styles.height * (data.max + 1) : 0px;
                                                         width: Styles.width - 50px;
                                                         font-weight: 800;
                                                         color: AppState.model[index].text-color;
@@ -171,7 +173,7 @@ export component LeftColumn inherits Rectangle {
                                                                         popup.x = cell.absolute-position.x;
                                                                         popup.y = cell.absolute-position.y;
                                                                         popup.visible = true;
-                                                                        popup.show(item.project, data.dev, !data.visible);
+                                                                        popup.show(item.project, data.dev, !data.enable);
                                                                     } else {
                                                                     }
                                                                 }
@@ -181,14 +183,14 @@ export component LeftColumn inherits Rectangle {
                                                 }
 
                                                 Rectangle {
-                                                    height: data.visible == false ? 0px : Styles.height * (data.max + 1);
+                                                    height: visibility ? Styles.height * (data.max + 1) : 0px;
 
                                                     VerticalLayout {
                                                         LineEdit {
                                                             width: Styles.width;
                                                             horizontal-alignment: center;
                                                             text: data.effort;
-                                                            height: data.visible == false ? 0px : Styles.height;
+                                                            height: visibility ? Styles.height : 0px;
 
                                                             accepted(text) => {
                                                                 data.effort = text.to-float();
@@ -198,13 +200,13 @@ export component LeftColumn inherits Rectangle {
 
                                                         Rectangle {
                                                             background: ((data.remains == data.effort && data.effort != 0) || (data.remains < 0)) ? Colors.red : Colors.transparent;
-                                                            height: data.visible == false ? 0px : Styles.height;
+                                                            height: visibility ? Styles.height : 0px;
 
                                                             Text {
                                                                 horizontal-alignment: center;
                                                                 vertical-alignment: center;
                                                                 text: data.remains;
-                                                                height: data.visible == false ? 0px : Styles.height;
+                                                                height: visibility ? Styles.height : 0px;
                                                             }
                                                         }
 
@@ -228,7 +230,7 @@ export component LeftColumn inherits Rectangle {
                                                             popup.x = cell.absolute-position.x;
                                                             popup.y = cell.absolute-position.y;
                                                             popup.visible = true;
-                                                            popup.show(item.project, data.dev, data.visible == false);
+                                                            popup.show(item.project, data.dev, data.enable == false);
                                                         } else {
                                                         }
                                                     }

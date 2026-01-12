@@ -45,6 +45,7 @@ export struct EffortByDevData {
     effort: int,
     remains: int,
     visible: bool,
+    enable: bool,
     max: int,
     datas: [EffortByDateData],
 }
@@ -55,6 +56,7 @@ export struct EffortByPrjData {
     start_week: int,
     end_week:int,
     visible: bool,
+    enable: bool,
     efforts: [EffortByDevData]
 }
 
@@ -332,7 +334,7 @@ export component EffortByDevGui inherits Rectangle {
         HorizontalLayout {
             spacing: 0px;
             padding: 0px;
-            visible: datas.visible;
+            visible: datas.visible && datas.enable;
 
             for data in datas.datas: Rectangle {
                 HorizontalLayout {
@@ -344,7 +346,7 @@ export component EffortByDevGui inherits Rectangle {
                     EffortByDataGui {
                         num_visible: root.num_visible;
                         effort: data;
-                        visible: datas.visible;
+                        visible: datas.visible && datas.enable;
                     }
                 }
             }
@@ -360,7 +362,7 @@ export component EffortByDevGui inherits Rectangle {
 export component EffortByPrjGui inherits Rectangle {
     in property <int> num_visible;
     in property <EffortByPrjData> effort;
-    visible: effort.visible;
+    visible: effort.visible && effort.enable;
     VerticalLayout {
         spacing: 0px;
         padding: 0px;

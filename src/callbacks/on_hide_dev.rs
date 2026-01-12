@@ -16,10 +16,10 @@ use crate::{AppWindow, EffortByPrjData, PjmCallback};
 pub fn register_on_hide_dev(ui: &AppWindow, vec_model_projects: Rc<VecModel<EffortByPrjData>>) {
     let ui_weak = ui.as_weak();
 
-    PjmCallback::get(ui).on_hide_dev(move |project_id: i32, dev_id: i32, visible: bool| {
+    PjmCallback::get(ui).on_hide_dev(move |project_id: i32, dev_id: i32, enable: bool| {
         println!(
-            "on_hide_dev - project: {} - dev: {} - visible: {}",
-            project_id, dev_id, visible
+            "on_hide_dev - project: {} - dev: {} - enable: {}",
+            project_id, dev_id, enable
         );
 
         for project_index in 0..vec_model_projects.row_count() {
@@ -49,7 +49,7 @@ pub fn register_on_hide_dev(ui: &AppWindow, vec_model_projects: Rc<VecModel<Effo
                     }
                 }
 
-                dev.visible = visible;
+                dev.enable = enable;
                 project.efforts.set_row_data(effort_index, dev);
                 break;
             }

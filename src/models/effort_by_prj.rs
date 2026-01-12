@@ -11,6 +11,7 @@ pub struct EffortByPrjDto {
     pub end_week: i32,
     pub project: i32,
     pub visible: bool,
+    pub enable: bool,
     pub efforts: Vec<EffortByDevDto>,
 }
 
@@ -22,6 +23,7 @@ impl EffortByPrjDto {
             start_week: start_date,
             end_week: end_date,
             visible: true,
+            enable: true,
             text: "New Project".to_string(),
             efforts: vec![
                 EffortByDevDto::new(Devs::Mcsw, project, num_weeks),
@@ -65,6 +67,7 @@ impl From<EffortByPrjDto> for crate::EffortByPrjData {
             text: SharedString::from(d.text.clone()),
             project: d.project,
             visible: d.visible,
+            enable: d.enable,
             efforts: ModelRc::new(slint::VecModel::from(
                 d.efforts
                     .into_iter()
@@ -81,6 +84,7 @@ impl From<crate::EffortByPrjData> for EffortByPrjDto {
             start_week: d.start_week,
             end_week: d.end_week,
             visible: d.visible,
+            enable: d.enable,
             text: d.text.clone().into(),
             project: d.project,
             efforts: d.efforts.iter().map(EffortByDevDto::from).collect(),
