@@ -36,19 +36,9 @@ pub fn register_on_changed_effort(
         for i in 0..effort.persons.row_count() {
             if let Some((person, _)) = info_cell(effort.persons.row_data(i).unwrap().as_str()) {
                 if !person.is_empty() {
-                    // Evita allocazioni ripetute - cerca direttamente con &str
-                    let mut founded = false;
-                    for j in 0..vec_model_worker_names.row_count() {
-                        if let Some(worker) = vec_model_worker_names.row_data(j) {
-                            if person == worker.as_str() {
-                                founded = true;
-                                break;
-                            }
-                        }
-                    }
-                    if !founded {
+                    let already_exists = vec_model_worker_names.iter().any(|w| w.as_str() == person);
+                    if !already_exists {
                         vec_model_worker_names.push(SharedString::from(person));
-                        // Ottimizzazione: aggiorna tutti i sovra in un colpo solo
                         for s in 0..vec_model_sovra.row_count() {
                             let mut sovra: SovraDto = vec_model_sovra.row_data(s).unwrap().into();
                             sovra.value.push(0);

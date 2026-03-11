@@ -1,14 +1,14 @@
-//! Callback handler for adding worker rows.
+//! Callback handler for deleting worker rows.
 
 use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, VecModel};
 use std::rc::Rc;
 
 use crate::{AppWindow, EffortByPrjData, PjmCallback};
 
-/// Registers the add row callback.
+/// Registers the delete row callback.
 ///
-/// This callback adds a new empty worker slot to a specific development category
-/// in a project. It updates the maximum row count for that development category.
+/// This callback removes the first empty worker slot from a specific development
+/// category in a project. It updates the maximum row count for that development category.
 ///
 /// # Arguments
 /// * `ui` - Reference to the main application window

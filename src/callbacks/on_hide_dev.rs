@@ -1,14 +1,14 @@
-//! Callback handler for adding worker rows.
+//! Callback handler for hiding/showing development categories.
 
 use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, VecModel};
 use std::rc::Rc;
 
 use crate::{AppWindow, EffortByPrjData, PjmCallback};
 
-/// Registers the add row callback.
+/// Registers the hide dev callback.
 ///
-/// This callback adds a new empty worker slot to a specific development category
-/// in a project. It updates the maximum row count for that development category.
+/// This callback toggles the `enable` flag on a development category within a project.
+/// If any worker slot has data, the operation is aborted to prevent data loss.
 ///
 /// # Arguments
 /// * `ui` - Reference to the main application window

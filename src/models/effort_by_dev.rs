@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use slint::{Model, ModelRc};
 
 use super::devs::Devs;
-use super::effort_by_date::EffortByDateDto;
+use super::effort_by_date::{EffortByDateDataExt, EffortByDateDto};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EffortByDevDto {
@@ -36,20 +36,20 @@ impl EffortByDevDto {
     pub fn prepend_weeks(&mut self, weeks: i32, mut start_week: i32) {
         let data = self.datas.first().unwrap().clone();
 
-        for _ in 0..weeks {
-            self.datas.insert(
-                0,
-                EffortByDateDto {
-                    total: 0,
-                    remains: 0,
-                    dev: data.dev,
-                    project: data.project,
-                    effort: data.effort,
-                    week: 0,
-                    persons: vec!["".to_string()],
-                },
-            );
-        }
+        // Collect all new items first, then prepend in one shot (O(n) instead of O(n²))
+        let mut new_items: Vec<EffortByDateDto> = (0..weeks)
+            .map(|_| EffortByDateDto {
+                total: 0,
+                remains: 0,
+                dev: data.dev,
+                project: data.project,
+                effort: data.effort,
+                week: 0,
+                persons: vec!["".to_string()],
+            })
+            .collect();
+        new_items.append(&mut self.datas);
+        self.datas = new_items;
 
         for data in self.datas.iter_mut() {
             data.week = start_week;
@@ -140,7 +140,7 @@ impl EffortByDevDataExt for crate::EffortByDevData {
         let mut total = 0;
         for day_index in 0..self.datas.row_count() {
             let mut day = self.datas.row_data(day_index).unwrap_or_default();
-            total += EffortByDateDto::from(day.clone()).get_total();
+            total += day.get_total();
             day.total = total;
             day.effort = self.effort;
             day.remains = self.effort - day.total;

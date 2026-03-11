@@ -63,13 +63,23 @@ impl From<crate::EffortByDateData> for EffortByDateDto {
 // Extension methods for EffortByDateData
 pub trait EffortByDateDataExt {
     fn get_sovra(&self, sovra: &mut HashMap<String, i32>);
+    fn get_total(&self) -> i32;
 }
 
 impl EffortByDateDataExt for crate::EffortByDateData {
+    fn get_total(&self) -> i32 {
+        let mut total = 0;
+        for item in self.persons.iter() {
+            if let Some((_, value)) = crate::utils::info_cell(item.as_str()) {
+                total += crate::utils::get_hours(value, 40);
+            }
+        }
+        total
+    }
+
     fn get_sovra(&self, sovra: &mut HashMap<String, i32>) {
         for item in self.persons.iter() {
             if let Some((person, value)) = crate::utils::info_cell(item.as_str()) {
-                // Usa entry API per evitare doppia ricerca in HashMap
                 *sovra.entry(person.to_string()).or_insert(0) += value;
             }
         }
