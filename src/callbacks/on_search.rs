@@ -18,9 +18,14 @@ pub fn register_on_search(ui: &AppWindow, vec_model_projects: Rc<VecModel<Effort
     PjmCallback::get(ui).on_search(move |text: SharedString| {
         println!("on_search {:?}", text);
 
-        // Ottimizzazione: evita allocazioni ripetute convertendo una sola volta
-        let search_text = text.as_str();
-        let is_empty = search_text.is_empty();
+        // Raccogliamo i filtri in un Vec<&str> così è riutilizzabile
+        let raw = text.to_string();
+        let filters: Vec<&str> = raw
+            .split('|')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        let is_empty = filters.is_empty();
 
         for project_index in 0..vec_model_projects.row_count() {
             let mut project = vec_model_projects
@@ -40,11 +45,12 @@ pub fn register_on_search(ui: &AppWindow, vec_model_projects: Rc<VecModel<Effort
                         let data = dev.datas.row_data(data_index).unwrap_or_default();
                         for person_index in 0..data.persons.row_count() {
                             if let Some(person) = data.persons.row_data(person_index) {
-                                // Evita allocazioni - confronta direttamente &str
-                                if person.as_str().contains(search_text) {
+                                let person_str = person.as_str();
+                                // "any": basta che almeno un filtro corrisponda
+                                if filters.iter().any(|f| person_str.contains(f)) {
                                     visible_prj = true;
                                     visible_dev = true;
-                                    break 'outer;
+                                    break 'outer; // ora funziona: siamo nel loop, non in una closure
                                 }
                             }
                         }
