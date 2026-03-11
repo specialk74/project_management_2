@@ -1,16 +1,16 @@
 [package]
 name = "project_app"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = { version = "0.4.42", features = ["serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.148"
-slint = { version = "1.14.1", features = ["serde"] }
+serde_json = "1.0.149"
+slint = { version = "1.15.1", features = ["serde"] }
 smol = "2.0.2"
 
 [build-dependencies]
-slint-build = "1.14.1"
+slint-build = "1.15.1"
