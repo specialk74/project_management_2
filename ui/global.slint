@@ -292,6 +292,14 @@ export component EffortByDataGui inherits Rectangle {
     in property <int> num_visible;
     in property <EffortByDateData> effort;
 
+    property <bool> is_drag_dest:
+        PjmCallback.drag_active &&
+        PjmCallback.drag_preview_offset != 0 &&
+        effort.project == PjmCallback.sel_project &&
+        effort.dev     == PjmCallback.sel_dev &&
+        effort.week    >= (PjmCallback.sel_start_week + PjmCallback.drag_preview_offset * 7) &&
+        effort.week    <= (PjmCallback.sel_end_week   + PjmCallback.drag_preview_offset * 7);
+
     popup := Rectangle {
         x: cell.x;
         y: cell.y + Styles.height;
@@ -431,6 +439,19 @@ export component EffortByDataGui inherits Rectangle {
                 PjmCallback.drag_preview_offset = 0;
             }
         }
+    }
+
+    // Ghost preview rectangle shown at destination during drag
+    Rectangle {
+        visible: is_drag_dest;
+        x: 0;
+        y: Styles.height * (PjmCallback.sel_start_row + 1);
+        width: Styles.width;
+        height: (PjmCallback.sel_end_row - PjmCallback.sel_start_row + 1) * Styles.height;
+        background: Colors.steelblue.with-alpha(0.25);
+        border-color: Colors.steelblue;
+        border-width: 2px;
+        z: 10;
     }
 }
 
