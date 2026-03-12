@@ -170,6 +170,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     register_on_add_row(&ui, vec_model_projects.clone());
     register_on_hide_dev(&ui, vec_model_projects.clone());
 
+    register_on_move_effort(
+        &ui,
+        vec_model_projects.clone(),
+        vec_model_sovra.clone(),
+        vec_model_worker_names.clone(),
+    );
+
     // Register open file callback (Ctrl+O)
     {
         let ui_weak = ui.as_weak();
