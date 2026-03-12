@@ -105,9 +105,8 @@ export component AppWindow inherits Window {
     default-font-family: Styles.font-family;
     title: "Project Management Effort Tracker App [" + PjmCallback.current_file + "]" + (PjmCallback.changed ? " (*)" : "");
     min-width: 1024px;
-    //height: 768px;
     resize-border-width: 10px;
-    //full-screen: true;
+    full-screen: true;
 
     VerticalLayout {
         Header {
