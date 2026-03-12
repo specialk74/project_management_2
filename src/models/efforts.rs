@@ -35,6 +35,28 @@ impl Default for EffortsDto {
 }
 
 impl EffortsDto {
+    /// Synchronizes the sovra vector to cover exactly the weeks in [start_week, end_week).
+    ///
+    /// Preserves existing sovra values for weeks already present, fills gaps with
+    /// empty entries, and trims/extends to match the given range. The value length
+    /// in each entry is also normalized to match the current number of workers.
+    pub fn sync_sovra(&mut self, start_week: i32, end_week: i32) {
+        let worker_count = self.worker_names.len();
+        let existing: std::collections::HashMap<i32, SovraDto> =
+            self.sovra.drain(..).map(|s| (s.week, s)).collect();
+
+        let mut week = start_week;
+        while week < end_week {
+            let mut entry = existing.get(&week).cloned().unwrap_or(SovraDto {
+                week,
+                value: vec![0; worker_count],
+            });
+            entry.value.resize(worker_count, 0);
+            self.sovra.push(entry);
+            week += 7;
+        }
+    }
+
     pub fn start_end_weeks(&self) -> (i32, i32) {
         use chrono::Utc;
 

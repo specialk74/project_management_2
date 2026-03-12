@@ -81,6 +81,8 @@ fn populate_models(
 
     println!("start_week: {} - end_week: {}", start_week, end_week);
 
+    app_info.sync_sovra(start_week, end_week);
+
     let weeks_day_dto = weeks_list(&days_to_local(start_week), &days_to_local(end_week));
     let weeks_day_data = ModelRc::new(VecModel::from(
         weeks_day_dto
