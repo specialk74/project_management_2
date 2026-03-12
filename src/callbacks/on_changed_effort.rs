@@ -5,10 +5,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::{
-    callbacks::rebuild_project,
-    models::{effort_by_date::EffortByDateDataExt, DevId, ProjectId, SovraDto},
-    utils::info_cell,
     AppWindow, EffortByDateData, EffortByPrjData, PjmCallback, SovraData,
+    callbacks::rebuild_project,
+    models::{DevId, ProjectId, SovraDto, effort_by_date::EffortByDateDataExt},
+    utils::info_cell,
 };
 
 /// Registers the changed effort callback.
@@ -34,16 +34,16 @@ pub fn register_on_changed_effort(
     PjmCallback::get(ui).on_changed_effort(move |effort: EffortByDateData| {
         // Add new workers to the list if they don't exist
         for i in 0..effort.persons.row_count() {
-            if let Some((person, _)) = info_cell(effort.persons.row_data(i).unwrap().as_str()) {
-                if !person.is_empty() {
-                    let already_exists = vec_model_worker_names.iter().any(|w| w.as_str() == person);
-                    if !already_exists {
-                        vec_model_worker_names.push(SharedString::from(person));
-                        for s in 0..vec_model_sovra.row_count() {
-                            let mut sovra: SovraDto = vec_model_sovra.row_data(s).unwrap().into();
-                            sovra.value.push(0);
-                            vec_model_sovra.set_row_data(s, sovra.into());
-                        }
+            if let Some((person, _)) = info_cell(effort.persons.row_data(i).unwrap().as_str())
+                && !person.is_empty()
+            {
+                let already_exists = vec_model_worker_names.iter().any(|w| w.as_str() == person);
+                if !already_exists {
+                    vec_model_worker_names.push(SharedString::from(person));
+                    for s in 0..vec_model_sovra.row_count() {
+                        let mut sovra: SovraDto = vec_model_sovra.row_data(s).unwrap().into();
+                        sovra.value.push(0);
+                        vec_model_sovra.set_row_data(s, sovra.into());
                     }
                 }
             }
