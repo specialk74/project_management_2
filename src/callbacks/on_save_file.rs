@@ -1,6 +1,7 @@
 //! Callback handler for saving efforts to file.
 
 use slint::{ComponentHandle, Global, Model, SharedString, VecModel};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::{
@@ -19,12 +20,14 @@ use crate::{
 /// * `vec_model_week_off` - Week off data model
 /// * `vec_model_worker_names` - Worker names model
 /// * `vec_model_sovra` - Over-allocation tracking model
+/// * `current_file` - Shared reference to the current file path
 pub fn register_on_save_file(
     ui: &AppWindow,
     vec_model_projects: Rc<VecModel<EffortByPrjData>>,
     vec_model_week_off: Rc<VecModel<i32>>,
     vec_model_worker_names: Rc<VecModel<SharedString>>,
     vec_model_sovra: Rc<VecModel<SovraData>>,
+    current_file: Rc<RefCell<String>>,
 ) {
     let ui_weak = ui.as_weak();
 
@@ -55,7 +58,7 @@ pub fn register_on_save_file(
             worker_names: worker_names.iter().map(|s| s.to_string()).collect(),
             projects,
         };
-        let _ = save_efforts_to_file(&dto, "efforts.json");
+        let _ = save_efforts_to_file(&dto, &current_file.borrow());
         if let Some(ui) = ui_weak.upgrade() {
             PjmCallback::get(&ui).set_changed(false);
         }

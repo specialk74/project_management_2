@@ -103,7 +103,7 @@ export component AppWindow inherits Window {
 
     default-font-size: Styles.font-size;
     default-font-family: Styles.font-family;
-    title: "Project Management Effort Tracker App " + (PjmCallback.changed ? "(*)" : "");
+    title: "Project Management Effort Tracker App [" + PjmCallback.current_file + "]" + (PjmCallback.changed ? " (*)" : "");
     min-width: 1024px;
     //height: 768px;
     resize-border-width: 10px;
@@ -183,6 +183,10 @@ export component AppWindow inherits Window {
                 }
                 if (event.text == "N" || event.text == "n") {
                     PjmCallback.new_project();
+                    return accept;
+                }
+                if (event.text == "O" || event.text == "o") {
+                    PjmCallback.open_file();
                     return accept;
                 }
             }

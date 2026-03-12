@@ -81,6 +81,7 @@ export global PjmCallback {
     callback changed_effort(EffortByDateData);
     callback set_dev_effort(EffortByDevData);
     callback save_file();
+    callback open_file();
     callback search(string);
     callback new_project();
     callback add_row(int, int);
@@ -92,6 +93,7 @@ export global PjmCallback {
     in property <bool> changed;
     in property <int> this_week;
     in property <length> this_week_width: 5px;
+    in property <string> current_file: "efforts.json";
 }
 
 component InternalText inherits Text {
